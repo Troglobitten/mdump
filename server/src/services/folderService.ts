@@ -2,7 +2,7 @@ import { mkdir, rmdir, rename, readdir, unlink, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { NOTES_DIR } from '../config/constants.js';
-import { sandboxPath, getRelativePath, isHiddenPath } from '../utils/paths.js';
+import { sandboxPath, getRelativePath } from '../utils/paths.js';
 import { validateFilename } from '../utils/filename.js';
 
 /**

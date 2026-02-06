@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validateQuery, searchQuerySchema } from '../middleware/validation.js';
 import { sendSuccess } from '../utils/response.js';
 import { search, getSuggestions, buildIndex, saveIndex } from '../services/searchService.js';
 
-const router = Router();
+const router: RouterType = Router();
 
 // Apply auth to all routes
 router.use(requireAuth);
@@ -18,7 +18,7 @@ router.get(
   '/',
   validateQuery(searchQuerySchema),
   asyncHandler(async (req, res) => {
-    const { q, scope, limit } = req.query as {
+    const { q, scope, limit } = req.query as unknown as {
       q: string;
       scope?: string;
       limit?: number;

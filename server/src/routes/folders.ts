@@ -1,7 +1,6 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validateBody, renameSchema, moveSchema } from '../middleware/validation.js';
 import { sendSuccess, sendError, sendNotFound } from '../utils/response.js';
 import {
   createFolder,
@@ -12,7 +11,7 @@ import {
   getAllFolders,
 } from '../services/folderService.js';
 
-const router = Router();
+const router: RouterType = Router();
 
 // Apply auth to all routes
 router.use(requireAuth);
@@ -23,7 +22,7 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req, res) => {
     const folders = await getAllFolders();
     sendSuccess(res, folders);
   })

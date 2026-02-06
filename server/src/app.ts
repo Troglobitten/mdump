@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type Express } from 'express';
 import session from 'express-session';
 import FileStore from 'session-file-store';
 import cookieParser from 'cookie-parser';
@@ -8,7 +8,6 @@ import { resolve, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
 import {
-  PORT,
   SESSION_SECRET,
   SESSION_MAX_AGE,
   SESSIONS_DIR,
@@ -26,7 +25,7 @@ import searchRoutes from './routes/search.js';
 import settingsRoutes from './routes/settings.js';
 
 // Create Express app
-const app = express();
+const app: Express = express();
 
 // Ensure required directories exist
 if (!existsSync(CONFIG_DIR)) {

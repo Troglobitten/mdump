@@ -1,6 +1,5 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
-import { dirname } from 'path';
 import type { AppSettings, UserPreferences } from '@mdump/shared';
 import { DEFAULT_PREFERENCES } from '@mdump/shared';
 import { SETTINGS_FILE, CONFIG_DIR } from '../config/constants.js';
@@ -46,7 +45,7 @@ export async function loadSettings(): Promise<AppSettings> {
   try {
     const content = await readFile(SETTINGS_FILE, 'utf-8');
     cachedSettings = { ...DEFAULT_SETTINGS, ...JSON.parse(content) };
-    return cachedSettings;
+    return cachedSettings!;
   } catch (error) {
     console.error('Error loading settings:', error);
     cachedSettings = DEFAULT_SETTINGS;

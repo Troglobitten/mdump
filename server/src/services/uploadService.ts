@@ -1,11 +1,10 @@
 import { mkdir, readdir, unlink, stat, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, basename, extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { lookup } from 'mime-types';
 import sharp from 'sharp';
 import type { UploadResult, AttachmentInfo } from '@mdump/shared';
-import { NOTES_DIR, MAX_UPLOAD_SIZE, ALLOWED_UPLOAD_TYPES, MAX_IMAGE_DIMENSION, RESIZABLE_TYPES } from '../config/constants.js';
+import { MAX_UPLOAD_SIZE, ALLOWED_UPLOAD_TYPES, MAX_IMAGE_DIMENSION, RESIZABLE_TYPES } from '../config/constants.js';
 import { sandboxPath, getAttachmentFolder, getRelativePath } from '../utils/paths.js';
 import { sanitizeFilename, generateUniqueFilename } from '../utils/filename.js';
 

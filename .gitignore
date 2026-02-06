@@ -59,6 +59,8 @@ sessions/
 
 # TypeScript
 *.tsbuildinfo
+# Declaration files are build outputs, except hand-written ambient declarations
+!server/src/types/*.d.ts
 
 # Vite
 *.local

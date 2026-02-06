@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import multer from 'multer';
 import { join } from 'path';
 import { mkdirSync, existsSync } from 'fs';
@@ -8,7 +8,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { saveUpload, listAttachments, deleteAttachment } from '../services/uploadService.js';
 import { DATA_DIR, MAX_UPLOAD_SIZE } from '../config/constants.js';
 
-const router = Router();
+const router: RouterType = Router();
 
 // Ensure upload temp directory exists
 const uploadDir = join(DATA_DIR, 'uploads');

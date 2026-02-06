@@ -26,7 +26,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
  * Used to protect routes that require a configured app
  */
 export async function requireSetup(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {

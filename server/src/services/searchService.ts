@@ -1,16 +1,15 @@
-import { readFile, writeFile, readdir, stat } from 'fs/promises';
+import { readFile, writeFile, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, basename, extname } from 'path';
 import MiniSearch from 'minisearch';
 import type { SearchResult, SearchMatch } from '@mdump/shared';
 import {
-  NOTES_DIR,
   SEARCH_INDEX_FILE,
   SEARCH_DEFAULT_LIMIT,
   SEARCH_FIELDS,
   SEARCH_BOOST,
 } from '../config/constants.js';
-import { sandboxPath, isMarkdownFile, getRelativePath } from '../utils/paths.js';
+import { sandboxPath, isMarkdownFile } from '../utils/paths.js';
 
 interface IndexedDocument {
   id: string;
@@ -215,7 +214,7 @@ export async function search(
       matches.push({
         field,
         snippet: terms.join(', '),
-        positions: Object.values(positions).flat() as number[][],
+        positions: Object.values(positions).flat() as unknown as number[][],
       });
     }
 

@@ -2,11 +2,10 @@ import { readFile, writeFile, unlink, rename, stat, readdir, mkdir, copyFile } f
 import { existsSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import type { FileNode, FileContent } from '@mdump/shared';
-import { NOTES_DIR, MARKDOWN_EXTENSION } from '../config/constants.js';
+import { NOTES_DIR } from '../config/constants.js';
 import {
   sandboxPath,
   getRelativePath,
-  isHiddenPath,
   getAttachmentFolder,
   ensureMarkdownExtension,
   isMarkdownFile,

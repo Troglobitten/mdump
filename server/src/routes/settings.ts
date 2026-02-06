@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validateBody, preferencesSchema } from '../middleware/validation.js';
@@ -12,7 +12,7 @@ import {
 import { getImageCacheSize, clearImageCache } from '../services/imageService.js';
 import { KEYBOARD_SHORTCUTS } from '../config/shortcuts.js';
 
-const router = Router();
+const router: RouterType = Router();
 
 // Apply auth to all routes
 router.use(requireAuth);
@@ -23,7 +23,7 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req, res) => {
     const preferences = await getPreferences();
     sendSuccess(res, preferences);
   })
@@ -49,7 +49,7 @@ router.patch(
  */
 router.get(
   '/tabs',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req, res) => {
     const settings = await loadSettings();
     sendSuccess(res, {
       openTabs: settings.openTabs,
@@ -80,7 +80,7 @@ router.put(
  * GET /api/settings/shortcuts
  * Get keyboard shortcuts
  */
-router.get('/shortcuts', (req, res) => {
+router.get('/shortcuts', (_req, res) => {
   sendSuccess(res, KEYBOARD_SHORTCUTS);
 });
 
@@ -90,7 +90,7 @@ router.get('/shortcuts', (req, res) => {
  */
 router.get(
   '/image-cache',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req, res) => {
     const size = await getImageCacheSize();
     sendSuccess(res, { size });
   })
@@ -102,7 +102,7 @@ router.get(
  */
 router.delete(
   '/image-cache',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req, res) => {
     const deletedFiles = await clearImageCache();
     sendSuccess(res, { deletedFiles }, 'Image cache cleared');
   })

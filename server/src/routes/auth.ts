@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/error.js';
 import { validateBody, loginSchema, setupSchema, changePasswordSchema } from '../middleware/validation.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -7,11 +7,10 @@ import {
   setupCredentials,
   validateCredentials,
   changePassword,
-  getUsername,
 } from '../services/authService.js';
-import { isSetupComplete, loadSettings } from '../services/settingsService.js';
+import { isSetupComplete } from '../services/settingsService.js';
 
-const router = Router();
+const router: RouterType = Router();
 
 /**
  * GET /api/auth/status

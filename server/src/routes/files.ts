@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validateBody, fileContentSchema, renameSchema, moveSchema } from '../middleware/validation.js';
+import { validateBody, fileContentSchema } from '../middleware/validation.js';
 import { sendSuccess, sendError, sendNotFound } from '../utils/response.js';
 import {
   getFileTree,
@@ -13,16 +13,15 @@ import {
   moveFile,
   duplicateFile,
   fileExists,
-  getFileMetadata,
 } from '../services/fileService.js';
 import { getResizedImage } from '../services/imageService.js';
 import { sandboxPath, isMarkdownFile } from '../utils/paths.js';
-import { NOTES_DIR, RESIZABLE_TYPES } from '../config/constants.js';
+import { RESIZABLE_TYPES } from '../config/constants.js';
 import { existsSync } from 'fs';
 import { readFile, stat } from 'fs/promises';
 import { lookup } from 'mime-types';
 
-const router = Router();
+const router: RouterType = Router();
 
 // Apply auth to all routes
 router.use(requireAuth);
@@ -33,7 +32,7 @@ router.use(requireAuth);
  */
 router.get(
   '/',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (_req, res) => {
     const tree = await getFileTree();
     sendSuccess(res, tree);
   })
