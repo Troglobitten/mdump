@@ -1,0 +1,188 @@
+/* Wysimark editor theme overrides */
+
+/* Dark mode: Override Wysimark's hardcoded light-mode CSS variables */
+[data-theme-mode="dark"] {
+  --shade-50: oklch(var(--b2, 0.25 0 0));
+  --shade-100: oklch(var(--b3, 0.22 0 0));
+  --shade-200: oklch(var(--b3, 0.22 0 0));
+  --shade-300: oklch(var(--bc, 0.85 0 0) / 0.3);
+  --shade-400: oklch(var(--bc, 0.85 0 0) / 0.5);
+  --shade-500: oklch(var(--bc, 0.85 0 0) / 0.6);
+  --shade-600: oklch(var(--bc, 0.85 0 0) / 0.7);
+  --shade-700: oklch(var(--bc, 0.85 0 0) / 0.8);
+  --shade-800: oklch(var(--bc, 0.85 0 0) / 0.9);
+  --shade-900: oklch(var(--bc, 0.85 0 0));
+  --code-block-bgcolor: oklch(var(--b2, 0.25 0 0));
+  --code-block-color: oklch(var(--bc, 0.85 0 0));
+}
+
+/* Focus theme: Keep light editor area (dark chrome, light editor) */
+[data-theme-mode="focus"] {
+  --shade-50: rgb(250 250 250);
+  --shade-100: rgb(245 245 245);
+  --shade-200: rgb(229 229 229);
+  --shade-300: rgb(212 212 212);
+  --code-block-bgcolor: rgb(245 245 245);
+  --code-block-color: rgb(39 39 42);
+}
+
+/* Editor container */
+.wysimark {
+  @apply h-full flex flex-col;
+}
+
+/* Toolbar */
+.wysimark-toolbar {
+  @apply flex items-center gap-1 px-3 py-2 border-b border-base-300 bg-base-200 flex-wrap;
+}
+
+.wysimark-toolbar button {
+  @apply p-1.5 rounded hover:bg-base-300 transition-colors;
+}
+
+.wysimark-toolbar button.active {
+  @apply bg-primary/20 text-primary;
+}
+
+.wysimark-toolbar-separator {
+  @apply w-px h-6 bg-base-300 mx-1;
+}
+
+/* Editor content area */
+.wysimark-editor {
+  @apply flex-1 overflow-auto p-4;
+}
+
+/* For focus theme - light editor on dark chrome */
+[data-theme='focus'] .wysimark-editor {
+  @apply bg-white text-gray-900;
+}
+
+[data-theme='focus'] .wysimark-editor ::selection {
+  @apply bg-primary/30;
+}
+
+/* Typography in editor */
+.wysimark-editor h1 {
+  @apply text-3xl font-bold mb-4 mt-6 first:mt-0;
+}
+
+.wysimark-editor h2 {
+  @apply text-2xl font-semibold mb-3 mt-5 first:mt-0;
+}
+
+.wysimark-editor h3 {
+  @apply text-xl font-medium mb-2 mt-4 first:mt-0;
+}
+
+.wysimark-editor p {
+  @apply mb-4 leading-relaxed;
+}
+
+.wysimark-editor ul,
+.wysimark-editor ol {
+  @apply mb-4 pl-6;
+}
+
+.wysimark-editor ul {
+  @apply list-disc;
+}
+
+.wysimark-editor ol {
+  @apply list-decimal;
+}
+
+.wysimark-editor li {
+  @apply mb-1;
+}
+
+.wysimark-editor blockquote {
+  @apply border-l-4 border-primary pl-4 italic my-4 text-base-content/80;
+}
+
+.wysimark-editor code {
+  @apply bg-base-200 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+[data-theme='focus'] .wysimark-editor code {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.wysimark-editor pre {
+  @apply bg-base-200 p-4 rounded-lg overflow-x-auto my-4;
+}
+
+[data-theme='focus'] .wysimark-editor pre {
+  @apply bg-gray-100;
+}
+
+.wysimark-editor pre code {
+  @apply bg-transparent p-0;
+}
+
+.wysimark-editor a {
+  @apply text-primary hover:underline;
+}
+
+.wysimark-editor img {
+  @apply max-w-full h-auto rounded-lg my-4;
+}
+
+.wysimark-editor hr {
+  @apply border-base-300 my-6;
+}
+
+.wysimark-editor table {
+  @apply w-full border-collapse my-4;
+}
+
+.wysimark-editor th,
+.wysimark-editor td {
+  @apply border border-base-300 px-3 py-2 text-left;
+}
+
+.wysimark-editor th {
+  @apply bg-base-200 font-semibold;
+}
+
+[data-theme='focus'] .wysimark-editor th {
+  @apply bg-gray-100;
+}
+
+/* Task list */
+.wysimark-editor input[type='checkbox'] {
+  @apply mr-2 checkbox checkbox-sm;
+}
+
+/* Placeholder */
+.wysimark-editor [data-placeholder]::before {
+  @apply text-base-content/40 pointer-events-none;
+  content: attr(data-placeholder);
+}
+
+/* Image upload loading state */
+.wysimark-editor .image-uploading {
+  @apply opacity-50 animate-pulse;
+}
+
+/* Link popup */
+.wysimark-link-popup {
+  @apply bg-base-100 border border-base-300 rounded-lg shadow-xl p-3;
+}
+
+.wysimark-link-popup input {
+  @apply input input-bordered input-sm w-full;
+}
+
+/* Dropdown menus */
+.wysimark-dropdown {
+  @apply bg-base-100 border border-base-300 rounded-lg shadow-xl py-1 min-w-32;
+}
+
+.wysimark-dropdown-item {
+  @apply px-3 py-1.5 hover:bg-base-200 cursor-pointer;
+}
+
+.wysimark-dropdown-item.active {
+  @apply bg-primary/20 text-primary;
+}

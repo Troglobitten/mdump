@@ -1,0 +1,212 @@
+@import './wysimark.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+html,
+body,
+#app {
+  @apply h-full w-full overflow-hidden;
+}
+
+body {
+  @apply bg-base-100 text-base-content;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-base-200;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-base-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral;
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* File tree styles */
+.file-tree {
+  @apply select-none min-h-full;
+}
+
+.file-tree-item {
+  @apply flex items-center gap-2 px-2 py-1 rounded cursor-pointer;
+  @apply hover:bg-base-200 transition-colors;
+}
+
+.file-tree-item.active {
+  @apply bg-primary/20 text-primary;
+}
+
+.file-tree-item.dirty::after {
+  content: '•';
+  @apply text-warning ml-auto;
+}
+
+/* File grid styles */
+.file-grid {
+  @apply grid grid-cols-3 gap-2 p-2;
+}
+
+.file-grid-item {
+  @apply flex flex-col items-center justify-center gap-1 p-3 rounded-lg cursor-pointer;
+  @apply border border-base-300 hover:bg-base-200 transition-colors;
+  min-height: 80px;
+}
+
+.file-grid-item.active {
+  @apply bg-primary/20 border-primary/40 text-primary;
+}
+
+.file-grid-item.dirty::after {
+  content: '•';
+  @apply text-warning text-xs;
+}
+
+/* Tab styles */
+.tab-bar {
+  @apply flex items-center gap-1 bg-base-200 px-2 py-1;
+}
+
+.tab {
+  @apply flex items-center gap-2 px-3 py-1.5 rounded text-sm whitespace-nowrap;
+  @apply bg-base-300 hover:bg-base-100 transition-colors cursor-pointer;
+}
+
+.tab.active {
+  @apply bg-base-100 shadow-sm;
+}
+
+.tab.dirty .tab-name::after {
+  content: ' •';
+  @apply text-warning;
+}
+
+.tab-close {
+  @apply p-0.5 rounded hover:bg-error/20 hover:text-error transition-colors;
+}
+
+/* Context menu styles */
+.context-menu {
+  @apply fixed z-50 min-w-48 py-1 rounded-lg shadow-xl;
+  @apply bg-base-100 border border-base-300;
+}
+
+.context-menu-item {
+  @apply flex items-center gap-3 px-4 py-2 text-sm cursor-pointer;
+  @apply hover:bg-base-200 transition-colors;
+}
+
+.context-menu-item.danger {
+  @apply text-error hover:bg-error/10;
+}
+
+.context-menu-separator {
+  @apply my-1 border-t border-base-300;
+}
+
+/* Modal styles */
+.modal-backdrop {
+  @apply fixed inset-0 z-40 bg-black/50 flex items-center justify-center;
+}
+
+.modal-content {
+  @apply bg-base-100 text-base-content rounded-xl shadow-2xl max-w-lg w-full mx-4;
+  @apply max-h-[90vh] overflow-auto;
+}
+
+/* Toast styles */
+.toast-container {
+  @apply fixed bottom-4 right-4 z-50 flex flex-col gap-2;
+}
+
+.toast {
+  @apply px-4 py-3 rounded-lg shadow-lg flex items-center gap-3;
+  @apply animate-in slide-in-from-right duration-300;
+}
+
+.toast-success {
+  @apply bg-success text-success-content;
+}
+
+.toast-error {
+  @apply bg-error text-error-content;
+}
+
+.toast-warning {
+  @apply bg-warning text-warning-content;
+}
+
+.toast-info {
+  @apply bg-info text-info-content;
+}
+
+/* Animation classes */
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
+/* Resize handle */
+.resize-handle {
+  @apply w-1 cursor-col-resize bg-transparent hover:bg-primary/30 transition-colors;
+}
+
+.resize-handle:active {
+  @apply bg-primary/50;
+}
+
+/* Search results */
+.search-result {
+  @apply px-3 py-2 cursor-pointer hover:bg-base-200 transition-colors;
+}
+
+.search-result.active {
+  @apply bg-primary/20;
+}
+
+.search-highlight {
+  @apply bg-warning/30 text-warning-content rounded px-0.5;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full border-2 border-base-300 border-t-primary;
+}

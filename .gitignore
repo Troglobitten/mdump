@@ -1,0 +1,72 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.js.map
+*.d.ts
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Data directory (when running locally)
+data/
+
+# Session files
+sessions/
+
+# Search index
+.search-index.json
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+*.local
+
+# Testing
+.coverage/
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Project planning / dev scripts
+mdump-project-plan.md
+test-api.mjs

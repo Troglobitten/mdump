@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation
+*.md
+!README.md
+
+# Local environment
+.env.local
+.env.*.local
+
+# Build artifacts (we build inside container)
+dist/
+build/
+
+# Development files
+.coverage/
+coverage/
+*.log
+*.local
+
+# Docker files (not needed inside container)
+docker/
+Dockerfile*
+docker-compose*
+
+# Data (mounted as volume)
+data/
+
+# OS files
+.DS_Store
+Thumbs.db
