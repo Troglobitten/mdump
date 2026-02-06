@@ -15,8 +15,9 @@ import {
   fileExists,
   getFileMetadata,
 } from '../services/fileService.js';
+import { getResizedImage } from '../services/imageService.js';
 import { sandboxPath, isMarkdownFile } from '../utils/paths.js';
-import { NOTES_DIR } from '../config/constants.js';
+import { NOTES_DIR, RESIZABLE_TYPES } from '../config/constants.js';
 import { existsSync } from 'fs';
 import { readFile, stat } from 'fs/promises';
 import { lookup } from 'mime-types';
@@ -69,9 +70,25 @@ router.get(
       }
 
       // For other files (attachments), serve them directly
-      const stats = await stat(fullPath);
       const mimeType = lookup(fullPath) || 'application/octet-stream';
 
+      // Check for resize query params
+      const wParam = req.query.w;
+      const hParam = req.query.h;
+      if (wParam && hParam && RESIZABLE_TYPES.includes(mimeType)) {
+        const w = parseInt(wParam as string, 10);
+        const h = parseInt(hParam as string, 10);
+        if (w > 0 && h > 0 && w <= 4096 && h <= 4096) {
+          const resized = await getResizedImage(fullPath, w, h);
+          res.setHeader('Content-Type', mimeType);
+          res.setHeader('Content-Length', resized.length);
+          res.setHeader('Cache-Control', 'private, max-age=31536000');
+          res.send(resized);
+          return;
+        }
+      }
+
+      const stats = await stat(fullPath);
       res.setHeader('Content-Type', mimeType);
       res.setHeader('Content-Length', stats.size);
       res.setHeader('Cache-Control', 'private, max-age=31536000');

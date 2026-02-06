@@ -113,6 +113,8 @@ export interface UploadResult {
   filename: string;
   size: number;
   mimeType: string;
+  width?: number;
+  height?: number;
 }
 
 export interface AttachmentInfo {

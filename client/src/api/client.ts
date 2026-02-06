@@ -235,6 +235,18 @@ export const settingsApi = {
     const response = await fetchApi<KeyboardShortcut[]>('/settings/shortcuts');
     return response.data || [];
   },
+
+  async getImageCacheInfo(): Promise<{ size: number }> {
+    const response = await fetchApi<{ size: number }>('/settings/image-cache');
+    return response.data!;
+  },
+
+  async clearImageCache(): Promise<{ deletedFiles: number }> {
+    const response = await fetchApi<{ deletedFiles: number }>('/settings/image-cache', {
+      method: 'DELETE',
+    });
+    return response.data!;
+  },
 };
 
 // Upload API

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, inject } from 'vue';
+import { ref, inject, watch } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useSettings } from '@/composables/useSettings';
 import { useTheme } from '@/composables/useTheme';
 import { useAuth } from '@/composables/useAuth';
+import { settingsApi } from '@/api/client';
 import type { useToast } from '@/composables/useToast';
 
 const open = defineModel<boolean>('open', { default: false });
@@ -13,13 +14,54 @@ const { availableThemes, currentTheme } = useTheme();
 const { changePassword } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
 
-const activeTab = ref<'appearance' | 'editor' | 'security'>('appearance');
+const activeTab = ref<'appearance' | 'editor' | 'security' | 'storage'>('appearance');
 
 // Password change
 const currentPassword = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
 const changingPassword = ref(false);
+
+// Image cache
+const cacheSize = ref(0);
+const loadingCache = ref(false);
+const clearingCache = ref(false);
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+async function loadCacheSize() {
+  loadingCache.value = true;
+  try {
+    const info = await settingsApi.getImageCacheInfo();
+    cacheSize.value = info.size;
+  } catch {
+    // ignore
+  } finally {
+    loadingCache.value = false;
+  }
+}
+
+async function handleClearCache() {
+  clearingCache.value = true;
+  try {
+    const result = await settingsApi.clearImageCache();
+    cacheSize.value = 0;
+    toast.success(`Cleared ${result.deletedFiles} cached image(s)`);
+  } catch {
+    toast.error('Failed to clear cache');
+  } finally {
+    clearingCache.value = false;
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'storage') loadCacheSize();
+});
 
 async function handleThemeChange(e: Event) {
   const theme = (e.target as HTMLSelectElement).value;
@@ -112,6 +154,13 @@ function close() {
             @click="activeTab = 'security'"
           >
             Security
+          </button>
+          <button
+            class="tab"
+            :class="{ 'tab-active': activeTab === 'storage' }"
+            @click="activeTab = 'storage'"
+          >
+            Storage
           </button>
         </div>
 
@@ -228,6 +277,29 @@ function close() {
               <span v-if="changingPassword" class="loading loading-spinner loading-sm"></span>
               {{ changingPassword ? 'Changing...' : 'Change Password' }}
             </button>
+          </div>
+
+          <!-- Storage -->
+          <div v-if="activeTab === 'storage'" class="space-y-4">
+            <h3 class="font-medium">Image Cache</h3>
+            <p class="text-sm opacity-70">
+              Resized images are cached on the server to avoid re-processing.
+            </p>
+
+            <div class="flex items-center gap-4">
+              <div class="stat-value text-lg">
+                <span v-if="loadingCache" class="loading loading-spinner loading-sm"></span>
+                <span v-else>{{ formatBytes(cacheSize) }}</span>
+              </div>
+              <button
+                class="btn btn-warning btn-sm"
+                :disabled="clearingCache || cacheSize === 0"
+                @click="handleClearCache"
+              >
+                <span v-if="clearingCache" class="loading loading-spinner loading-sm"></span>
+                {{ clearingCache ? 'Clearing...' : 'Clear Image Cache' }}
+              </button>
+            </div>
           </div>
         </div>
 

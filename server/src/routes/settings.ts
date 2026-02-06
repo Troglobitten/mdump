@@ -9,6 +9,7 @@ import {
   loadSettings,
   updateSettings,
 } from '../services/settingsService.js';
+import { getImageCacheSize, clearImageCache } from '../services/imageService.js';
 import { KEYBOARD_SHORTCUTS } from '../config/shortcuts.js';
 
 const router = Router();
@@ -82,5 +83,29 @@ router.put(
 router.get('/shortcuts', (req, res) => {
   sendSuccess(res, KEYBOARD_SHORTCUTS);
 });
+
+/**
+ * GET /api/settings/image-cache
+ * Get image cache size info
+ */
+router.get(
+  '/image-cache',
+  asyncHandler(async (req, res) => {
+    const size = await getImageCacheSize();
+    sendSuccess(res, { size });
+  })
+);
+
+/**
+ * DELETE /api/settings/image-cache
+ * Clear image cache
+ */
+router.delete(
+  '/image-cache',
+  asyncHandler(async (req, res) => {
+    const deletedFiles = await clearImageCache();
+    sendSuccess(res, { deletedFiles }, 'Image cache cleared');
+  })
+);
 
 export default router;

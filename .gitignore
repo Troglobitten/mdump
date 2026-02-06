@@ -54,6 +54,9 @@ sessions/
 # Search index
 .search-index.json
 
+# Image cache
+.image-cache/
+
 # TypeScript
 *.tsbuildinfo
 

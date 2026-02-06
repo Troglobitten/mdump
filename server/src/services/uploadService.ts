@@ -1,10 +1,11 @@
-import { mkdir, readdir, unlink, stat } from 'fs/promises';
+import { mkdir, readdir, unlink, stat, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { lookup } from 'mime-types';
+import sharp from 'sharp';
 import type { UploadResult, AttachmentInfo } from '@mdump/shared';
-import { NOTES_DIR, MAX_UPLOAD_SIZE, ALLOWED_UPLOAD_TYPES } from '../config/constants.js';
+import { NOTES_DIR, MAX_UPLOAD_SIZE, ALLOWED_UPLOAD_TYPES, MAX_IMAGE_DIMENSION, RESIZABLE_TYPES } from '../config/constants.js';
 import { sandboxPath, getAttachmentFolder, getRelativePath } from '../utils/paths.js';
 import { sanitizeFilename, generateUniqueFilename } from '../utils/filename.js';
 
@@ -52,6 +53,33 @@ export async function saveUpload(
   const { rename: renameFile } = await import('fs/promises');
   await renameFile(file.path, filePath);
 
+  // Process image: read dimensions, constrain oversized images
+  let width: number | undefined;
+  let height: number | undefined;
+
+  if (RESIZABLE_TYPES.includes(mimeType)) {
+    try {
+      const metadata = await sharp(filePath).metadata();
+      width = metadata.width;
+      height = metadata.height;
+
+      if (width && height && (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION)) {
+        const resized = await sharp(filePath)
+          .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+            fit: 'inside',
+            withoutEnlargement: true,
+          })
+          .toBuffer();
+        await writeFile(filePath, resized);
+        const newMeta = await sharp(filePath).metadata();
+        width = newMeta.width;
+        height = newMeta.height;
+      }
+    } catch {
+      // If sharp fails, continue without dimensions
+    }
+  }
+
   // Return the URL path for the attachment
   const relativePath = getRelativePath(filePath);
   const url = `/api/files/${encodeURIComponent(relativePath)}`;
@@ -61,6 +89,8 @@ export async function saveUpload(
     filename: uniqueName,
     size: file.size,
     mimeType,
+    width,
+    height,
   };
 }
 

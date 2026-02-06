@@ -37,6 +37,43 @@ const saving = ref(false);
 const content = ref('');
 const lastSavedContent = ref('');
 const editorRef = ref<InstanceType<typeof Wysimark> | null>(null);
+const editorWrapRef = ref<HTMLElement | null>(null);
+
+// MutationObserver for rewriting img src to include resize params
+let imgObserver: MutationObserver | null = null;
+let imgObserverTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function processImages() {
+  if (!editorWrapRef.value) return;
+  const imgs = editorWrapRef.value.querySelectorAll('img');
+  for (const img of imgs) {
+    const src = img.getAttribute('src');
+    if (!src || !src.startsWith('/api/files/')) continue;
+
+    // Read dimensions from HTML attributes (Wysimark sets these, not inline styles)
+    const attrWidth = img.getAttribute('width');
+    const attrHeight = img.getAttribute('height');
+    if (!attrWidth || !attrHeight) continue;
+
+    const w = Math.round(parseInt(attrWidth, 10) / 10) * 10;
+    const h = Math.round(parseInt(attrHeight, 10) / 10) * 10;
+    if (w <= 0 || h <= 0) continue;
+
+    // Build the expected src with resize params
+    const baseSrc = src.split('?')[0];
+    const expectedSrc = `${baseSrc}?w=${w}&h=${h}`;
+
+    // Only modify if not already set to the right value
+    if (src !== expectedSrc) {
+      img.setAttribute('src', expectedSrc);
+    }
+  }
+}
+
+function scheduleProcessImages() {
+  if (imgObserverTimeout) clearTimeout(imgObserverTimeout);
+  imgObserverTimeout = setTimeout(processImages, 300);
+}
 
 // Auto-save timers
 let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -122,8 +159,12 @@ async function handlePaste(e: ClipboardEvent) {
 
       try {
         const result = await uploadApi.upload(props.filePath, file);
+        let url = result.url;
+        if (result.width && result.height) {
+          url = `${url}#srcSize=${result.width}x${result.height}&size=${result.width}x${result.height}`;
+        }
         const currentMarkdown = editorRef.value?.getMarkdown() || '';
-        const imageMarkdown = `\n![${result.filename}](${result.url})\n`;
+        const imageMarkdown = `\n![${result.filename}](${url})\n`;
         editorRef.value?.setMarkdown(currentMarkdown + imageMarkdown);
         toast.success('Image uploaded');
       } catch (error) {
@@ -172,8 +213,12 @@ async function handleDrop(e: DragEvent) {
     if (file.type.startsWith('image/')) {
       try {
         const result = await uploadApi.upload(props.filePath, file);
+        let url = result.url;
+        if (result.width && result.height) {
+          url = `${url}#srcSize=${result.width}x${result.height}&size=${result.width}x${result.height}`;
+        }
         const currentMarkdown = editorRef.value?.getMarkdown() || '';
-        const imageMarkdown = `\n![${result.filename}](${result.url})\n`;
+        const imageMarkdown = `\n![${result.filename}](${url})\n`;
         editorRef.value?.setMarkdown(currentMarkdown + imageMarkdown);
         toast.success('Image uploaded');
       } catch (error) {
@@ -195,6 +240,18 @@ onMounted(async () => {
     }
   });
 
+  // Set up MutationObserver for image resize src rewriting
+  nextTick(() => {
+    if (editorWrapRef.value) {
+      imgObserver = new MutationObserver(scheduleProcessImages);
+      imgObserver.observe(editorWrapRef.value, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'width', 'height'],
+      });
+    }
+  });
 });
 
 onUnmounted(() => {
@@ -204,6 +261,15 @@ onUnmounted(() => {
 
   if (autoSaveTimeout) {
     clearTimeout(autoSaveTimeout);
+  }
+
+  if (imgObserver) {
+    imgObserver.disconnect();
+    imgObserver = null;
+  }
+
+  if (imgObserverTimeout) {
+    clearTimeout(imgObserverTimeout);
   }
 
   // Save on unmount if dirty
@@ -235,7 +301,7 @@ watch(externalReloadPath, (path) => {
     </div>
 
     <!-- Editor -->
-    <div v-else class="editor-wrap flex-1 min-h-0" @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent>
+    <div v-else ref="editorWrapRef" class="editor-wrap flex-1 min-h-0" @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent>
       <Wysimark
         ref="editorRef"
         v-model="content"

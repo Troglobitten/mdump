@@ -53,6 +53,11 @@ export const ALLOWED_UPLOAD_TYPES = [
   'application/octet-stream',
 ];
 
+// Image processing
+export const MAX_IMAGE_DIMENSION = 2560;
+export const IMAGE_CACHE_DIR = resolve(DATA_DIR, '.image-cache');
+export const RESIZABLE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 // Search
 export const SEARCH_DEFAULT_LIMIT = 50;
 export const SEARCH_FIELDS = ['title', 'content', 'path'];
