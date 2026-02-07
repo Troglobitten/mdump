@@ -40,6 +40,9 @@ const content = ref('');
 const lastSavedContent = ref('');
 const editorRef = ref<InstanceType<typeof Wysimark> | null>(null);
 const editorWrapRef = ref<HTMLElement | null>(null);
+const attachmentBarRef = ref<InstanceType<typeof AttachmentBar> | null>(null);
+const imageInputRef = ref<HTMLInputElement | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 const pasteModalOpen = ref(false);
 
 // MutationObserver for rewriting img src to include resize params
@@ -257,6 +260,78 @@ function handlePasteMarkdown(text: string) {
   slateEditor.dispatchEvent(textEvent);
 }
 
+// Insert markdown at cursor (if editor has focus) or append at bottom
+function insertMarkdownAtCursorOrBottom(text: string) {
+  const slateEditor = editorWrapRef.value?.querySelector('[data-slate-editor]') as HTMLElement | null;
+  if (slateEditor && document.activeElement === slateEditor) {
+    const textEvent = new ClipboardEvent('paste', {
+      clipboardData: new DataTransfer(),
+      bubbles: true,
+      cancelable: true,
+    });
+    textEvent.clipboardData!.setData('text/plain', text);
+    slateEditor.dispatchEvent(textEvent);
+  } else {
+    const currentMarkdown = editorRef.value?.getMarkdown() || '';
+    editorRef.value?.setMarkdown(currentMarkdown + '\n' + text);
+  }
+}
+
+async function handleImageUpload(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  try {
+    const result = await uploadApi.upload(props.filePath, file);
+    let url = result.url;
+    if (result.width && result.height) {
+      url = `${url}#srcSize=${result.width}x${result.height}&size=${result.width}x${result.height}`;
+    }
+    insertMarkdownAtCursorOrBottom(`![${result.filename}](${url})`);
+    attachmentBarRef.value?.loadAttachments();
+    toast.success('Image inserted');
+  } catch {
+    toast.error('Failed to upload image');
+  } finally {
+    input.value = '';
+  }
+}
+
+async function handleFileUpload(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  try {
+    const result = await uploadApi.upload(props.filePath, file);
+    insertMarkdownAtCursorOrBottom(`[${result.filename}](${result.url})`);
+    attachmentBarRef.value?.loadAttachments();
+    toast.success('File attached');
+  } catch {
+    toast.error('Failed to upload file');
+  } finally {
+    input.value = '';
+  }
+}
+
+const IMAGE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`;
+const PAPERCLIP_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>`;
+
+registerButton({
+  id: 'insert-image',
+  title: 'Insert Image',
+  icon: IMAGE_ICON,
+  onClick: () => { imageInputRef.value?.click(); },
+});
+
+registerButton({
+  id: 'attach-file',
+  title: 'Attach File',
+  icon: PAPERCLIP_ICON,
+  onClick: () => { fileInputRef.value?.click(); },
+});
+
 let unsubscribeShortcut: (() => void) | null = null;
 
 onMounted(async () => {
@@ -323,7 +398,7 @@ watch(externalReloadPath, (path) => {
     <Breadcrumb :path="filePath" :saving="saving" />
 
     <!-- Attachment bar -->
-    <AttachmentBar :file-path="filePath" />
+    <AttachmentBar ref="attachmentBarRef" :file-path="filePath" />
 
     <!-- Loading state -->
     <div v-if="loading" class="flex-1 flex items-center justify-center">
@@ -338,6 +413,10 @@ watch(externalReloadPath, (path) => {
         placeholder="Start writing..."
       />
     </div>
+
+    <!-- Hidden file inputs for toolbar buttons -->
+    <input ref="imageInputRef" type="file" class="hidden" accept="image/*" @change="handleImageUpload" />
+    <input ref="fileInputRef" type="file" class="hidden" @change="handleFileUpload" />
 
     <!-- Paste as markdown modal -->
     <PasteMarkdownModal v-model:open="pasteModalOpen" @submit="handlePasteMarkdown" />

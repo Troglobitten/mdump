@@ -24,6 +24,7 @@ const BUTTON_STYLES: Partial<CSSStyleDeclaration> = {
   color: 'var(--shade-500)',
   cursor: 'pointer',
   border: '1px solid transparent',
+  transition: 'all 100ms',
 };
 
 // Wysimark toolbar divider styles (styled component Ix/$x)
@@ -37,15 +38,83 @@ const DIVIDER_STYLES: Partial<CSSStyleDeclaration> = {
   marginRight: '0.25em',
 };
 
+// Wysimark tooltip label styles (styled component Nx)
+const TOOLTIP_LABEL_STYLES: Partial<CSSStyleDeclaration> = {
+  position: 'fixed',
+  zIndex: '10',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif',
+  fontSize: '0.875em',
+  lineHeight: '1.5em',
+  padding: '0 0.5em',
+  color: 'var(--shade-300)',
+  background: 'var(--shade-700)',
+  borderRadius: '0.25em',
+  whiteSpace: 'nowrap',
+  pointerEvents: 'none',
+};
+
+// Wysimark tooltip arrow styles (styled component Wx)
+const TOOLTIP_ARROW_STYLES: Partial<CSSStyleDeclaration> = {
+  position: 'fixed',
+  zIndex: '10',
+  width: '0',
+  height: '0',
+  borderLeft: '0.375em solid transparent',
+  borderRight: '0.375em solid transparent',
+  borderTop: '0.375em solid var(--shade-700)',
+  pointerEvents: 'none',
+};
+
+// Active tooltip elements (shared across all buttons, only one visible at a time)
+let tooltipLabel: HTMLDivElement | null = null;
+let tooltipArrow: HTMLSpanElement | null = null;
+
+function showTooltip(btn: HTMLElement, title: string) {
+  if (!tooltipLabel) {
+    tooltipLabel = document.createElement('div');
+    Object.assign(tooltipLabel.style, TOOLTIP_LABEL_STYLES);
+    document.body.appendChild(tooltipLabel);
+  }
+  if (!tooltipArrow) {
+    tooltipArrow = document.createElement('span');
+    Object.assign(tooltipArrow.style, TOOLTIP_ARROW_STYLES);
+    document.body.appendChild(tooltipArrow);
+  }
+
+  const rect = btn.getBoundingClientRect();
+
+  tooltipLabel.textContent = title;
+  tooltipLabel.style.left = `${rect.left}px`;
+  tooltipLabel.style.top = `calc(${rect.top}px - 2em)`;
+  tooltipLabel.style.display = '';
+
+  tooltipArrow.style.left = `calc(${rect.left + rect.width / 2}px - 0.375em)`;
+  tooltipArrow.style.top = `calc(${rect.top}px - 0.5em)`;
+  tooltipArrow.style.display = '';
+}
+
+function hideTooltip() {
+  if (tooltipLabel) tooltipLabel.style.display = 'none';
+  if (tooltipArrow) tooltipArrow.style.display = 'none';
+}
+
 function createButtonEl(button: ToolbarButton): HTMLDivElement {
   const btn = document.createElement('div');
   btn.setAttribute('data-item-type', 'button');
   btn.setAttribute(CUSTOM_ATTR, button.id);
-  btn.title = button.title;
   Object.assign(btn.style, BUTTON_STYLES);
   btn.innerHTML = button.icon;
-  btn.addEventListener('mouseenter', () => { btn.style.backgroundColor = 'var(--shade-100)'; });
-  btn.addEventListener('mouseleave', () => { btn.style.backgroundColor = 'transparent'; });
+  btn.addEventListener('mouseenter', () => {
+    btn.style.backgroundColor = 'var(--blue-100)';
+    btn.style.color = 'var(--shade-700)';
+    showTooltip(btn, button.title);
+  });
+  btn.addEventListener('mouseleave', () => {
+    btn.style.backgroundColor = 'transparent';
+    btn.style.color = 'var(--shade-500)';
+    hideTooltip();
+  });
+  btn.addEventListener('mousedown', (e) => e.preventDefault());
   btn.addEventListener('click', button.onClick);
   return btn;
 }
@@ -126,6 +195,15 @@ export function useToolbarButtons(editorWrapRef: Ref<HTMLElement | null>) {
     }
     if (injectTimeout) {
       clearTimeout(injectTimeout);
+    }
+    // Clean up tooltip elements from document.body
+    if (tooltipLabel) {
+      tooltipLabel.remove();
+      tooltipLabel = null;
+    }
+    if (tooltipArrow) {
+      tooltipArrow.remove();
+      tooltipArrow = null;
     }
   });
 

@@ -115,6 +115,8 @@ function handleDrop(e: DragEvent) {
 }
 
 onMounted(loadAttachments);
+
+defineExpose({ loadAttachments });
 </script>
 
 <template>
