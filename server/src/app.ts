@@ -13,6 +13,7 @@ import {
   SESSIONS_DIR,
   CONFIG_DIR,
   IS_PRODUCTION,
+  HTTPS_ENABLED,
 } from './config/constants.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { checkSetup } from './middleware/auth.js';
@@ -52,6 +53,7 @@ app.use(
           },
         }
       : false,
+    hsts: HTTPS_ENABLED, // Only send HSTS header when TLS is active
   })
 );
 
@@ -75,7 +77,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: IS_PRODUCTION,
+      secure: HTTPS_ENABLED, // Only set secure cookies when TLS is active
       httpOnly: true,
       sameSite: 'strict',
       maxAge: SESSION_MAX_AGE,

@@ -51,7 +51,7 @@ COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/client/dist ./client/dist
 
 # Create data directories
-RUN mkdir -p /data/notes /data/config /data/.image-cache
+RUN mkdir -p /data/notes /data/config /data/.image-cache /data/certs
 
 # Environment variables
 ENV NODE_ENV=production

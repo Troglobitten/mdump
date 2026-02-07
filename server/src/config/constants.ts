@@ -29,6 +29,11 @@ export const SEARCH_INDEX_FILE = resolve(DATA_DIR, '.search-index.json');
 export const PORT = parseInt(process.env.PORT || '8080', 10);
 export const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production';
 
+// TLS
+export const TLS_CERT = process.env.TLS_CERT || '';
+export const TLS_KEY = process.env.TLS_KEY || '';
+export const HTTPS_ENABLED = !!(TLS_CERT && TLS_KEY);
+
 // Auth
 export const BCRYPT_ROUNDS = 10;
 export const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days

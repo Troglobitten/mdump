@@ -11,12 +11,17 @@ services:
       - mdump-notes:/data/notes
       - mdump-config:/data/config
       - mdump-cache:/data/.image-cache
+      # Optional: Mount TLS certificates for HTTPS
+      # - /path/to/certs:/data/certs:ro
     environment:
       - NODE_ENV=production
       - DATA_DIR=/data
       - NOTES_DIR=/data/notes
       - PORT=8080
       - SESSION_SECRET=${SESSION_SECRET}
+      # Optional: Enable HTTPS by providing paths to TLS cert and key inside the container
+      # - TLS_CERT=/data/certs/cert.pem
+      # - TLS_KEY=/data/certs/key.pem
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/auth/status"]
       interval: 30s
