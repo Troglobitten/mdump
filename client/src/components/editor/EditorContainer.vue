@@ -5,10 +5,12 @@ import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
 import { useKeyboard } from '@/composables/useKeyboard';
+import { useToolbarButtons } from '@/composables/useToolbarButtons';
 import type { useToast } from '@/composables/useToast';
 import { uploadApi } from '@/api/client';
 import Breadcrumb from './Breadcrumb.vue';
 import AttachmentBar from './AttachmentBar.vue';
+import PasteMarkdownModal from '@/components/modals/PasteMarkdownModal.vue';
 import { cleanMarkdown } from '@/utils/cleanMarkdown';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
@@ -38,6 +40,7 @@ const content = ref('');
 const lastSavedContent = ref('');
 const editorRef = ref<InstanceType<typeof Wysimark> | null>(null);
 const editorWrapRef = ref<HTMLElement | null>(null);
+const pasteModalOpen = ref(false);
 
 // MutationObserver for rewriting img src to include resize params
 let imgObserver: MutationObserver | null = null;
@@ -228,6 +231,32 @@ async function handleDrop(e: DragEvent) {
   }
 }
 
+// Custom toolbar buttons
+const { registerButton } = useToolbarButtons(editorWrapRef);
+
+const PASTE_MD_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2"/><path d="M11 14h10"/><path d="m17 10 4 4-4 4"/></svg>`;
+
+registerButton({
+  id: 'paste-markdown',
+  title: 'Paste as Markdown',
+  icon: PASTE_MD_ICON,
+  onClick: () => { pasteModalOpen.value = true; },
+});
+
+function handlePasteMarkdown(text: string) {
+  const slateEditor = editorWrapRef.value?.querySelector('[data-slate-editor]') as HTMLElement | null;
+  if (!slateEditor) return;
+
+  slateEditor.focus();
+  const textEvent = new ClipboardEvent('paste', {
+    clipboardData: new DataTransfer(),
+    bubbles: true,
+    cancelable: true,
+  });
+  textEvent.clipboardData!.setData('text/plain', text);
+  slateEditor.dispatchEvent(textEvent);
+}
+
 let unsubscribeShortcut: (() => void) | null = null;
 
 onMounted(async () => {
@@ -251,6 +280,7 @@ onMounted(async () => {
         attributeFilter: ['style', 'width', 'height'],
       });
     }
+
   });
 });
 
@@ -308,6 +338,9 @@ watch(externalReloadPath, (path) => {
         placeholder="Start writing..."
       />
     </div>
+
+    <!-- Paste as markdown modal -->
+    <PasteMarkdownModal v-model:open="pasteModalOpen" @submit="handlePasteMarkdown" />
   </div>
 </template>
 
@@ -331,6 +364,11 @@ watch(externalReloadPath, (path) => {
   min-height: 0;
   overflow-y: hidden !important;
   color: inherit !important;
+}
+/* Wysimark toolbar wrapper (Mx) — override overflow:hidden so
+   custom toolbar buttons injected at the end are visible */
+.editor-wrap > div > div > div:first-child {
+  overflow: visible !important;
 }
 /* Slate editor area */
 .editor-wrap [data-slate-editor] {
