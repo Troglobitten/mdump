@@ -1,4 +1,17 @@
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+
+// Version (read from root package.json)
+function getVersion(): string {
+  try {
+    const pkgPath = resolve(__dirname, '..', '..', '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+export const VERSION = getVersion();
 
 // Environment
 export const NODE_ENV = process.env.NODE_ENV || 'development';

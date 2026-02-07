@@ -50,8 +50,8 @@ COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/client/dist ./client/dist
 
-# Create data directory
-RUN mkdir -p /data/notes /data/config
+# Create data directories
+RUN mkdir -p /data/notes /data/config /data/.image-cache
 
 # Environment variables
 ENV NODE_ENV=production

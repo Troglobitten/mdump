@@ -10,6 +10,7 @@ export function useAuth() {
   const isAuthenticated = computed(() => authStatus.value?.authenticated ?? false);
   const isSetupComplete = computed(() => authStatus.value?.setupComplete ?? false);
   const needsSetup = computed(() => !authStatus.value?.setupComplete);
+  const version = computed(() => authStatus.value?.version ?? '');
 
   async function checkStatus(): Promise<AuthStatus> {
     loading.value = true;
@@ -33,10 +34,12 @@ export function useAuth() {
 
     try {
       await authApi.setup(credentials);
+      const currentVersion = authStatus.value?.version ?? '';
       authStatus.value = {
         authenticated: true,
         setupComplete: true,
-      };
+        version: currentVersion,
+      } satisfies AuthStatus;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Setup failed';
       throw err;
@@ -104,6 +107,7 @@ export function useAuth() {
     isAuthenticated,
     isSetupComplete,
     needsSetup,
+    version,
     loading: readonly(loading),
     error: readonly(error),
     checkStatus,

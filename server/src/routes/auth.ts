@@ -9,6 +9,7 @@ import {
   changePassword,
 } from '../services/authService.js';
 import { isSetupComplete } from '../services/settingsService.js';
+import { VERSION } from '../config/constants.js';
 
 const router: RouterType = Router();
 
@@ -25,6 +26,7 @@ router.get(
     sendSuccess(res, {
       authenticated,
       setupComplete,
+      version: VERSION,
       username: authenticated ? req.session?.username : null,
     });
   })

@@ -34,6 +34,7 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 export interface AuthStatus {
   authenticated: boolean;
   setupComplete: boolean;
+  version: string;
 }
 
 export interface LoginCredentials {

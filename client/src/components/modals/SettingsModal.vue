@@ -11,7 +11,7 @@ const open = defineModel<boolean>('open', { default: false });
 
 const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning } = useSettings();
 const { availableThemes, currentTheme } = useTheme();
-const { changePassword } = useAuth();
+const { changePassword, version } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
 
 const activeTab = ref<'appearance' | 'editor' | 'security' | 'storage'>('appearance');
@@ -304,7 +304,8 @@ function close() {
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end p-4 border-t border-base-300">
+        <div class="flex items-center justify-between p-4 border-t border-base-300">
+          <span v-if="version" class="text-xs opacity-50">v{{ version }}</span>
           <button class="btn" @click="close">Close</button>
         </div>
       </div>
