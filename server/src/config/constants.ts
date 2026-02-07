@@ -1,5 +1,8 @@
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Version (read from root package.json)
 function getVersion(): string {
