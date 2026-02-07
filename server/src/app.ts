@@ -50,6 +50,7 @@ app.use(
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", 'data:', 'blob:'],
             connectSrc: ["'self'", 'ws:', 'wss:'],
+            upgradeInsecureRequests: HTTPS_ENABLED ? [] : null,
           },
         }
       : false,
