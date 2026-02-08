@@ -118,4 +118,10 @@ export const preferencesSchema = z.object({
   sidebarWidth: z.number().positive().optional(),
   sidebarCollapsed: z.boolean().optional(),
   defaultView: z.enum(['tree', 'list', 'grid']).optional(),
+  paperSize: z.enum(['A4', 'Letter', 'Legal', 'A3', 'A5']).optional(),
+  verticalSpacing: z.enum(['default', 'compact', 'comfortable']).optional(),
+  fontScale: z.union([z.literal(50), z.literal(75), z.literal(100), z.literal(150), z.literal(200)]).optional(),
+  pageWidthMode: z.boolean().optional(),
+  printFontScale: z.union([z.literal(50), z.literal(75), z.literal(100), z.literal(150), z.literal(200)]).optional(),
+  printVerticalSpacing: z.enum(['default', 'compact', 'comfortable']).optional(),
 }).partial();

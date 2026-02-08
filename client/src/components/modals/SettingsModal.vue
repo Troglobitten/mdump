@@ -9,12 +9,12 @@ import type { useToast } from '@/composables/useToast';
 
 const open = defineModel<boolean>('open', { default: false });
 
-const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning } = useSettings();
+const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing } = useSettings();
 const { availableThemes, currentTheme } = useTheme();
 const { changePassword, version } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
 
-const activeTab = ref<'appearance' | 'editor' | 'security' | 'storage'>('appearance');
+const activeTab = ref<'appearance' | 'editor' | 'print' | 'account' | 'storage'>('appearance');
 
 // Password change
 const currentPassword = ref('');
@@ -78,6 +78,36 @@ async function handleAutoSaveDebounce(e: Event) {
   if (value >= 500 && value <= 10000) {
     await setAutoSaveDebounce(value);
   }
+}
+
+async function handlePaperSizeChange(e: Event) {
+  const size = (e.target as HTMLSelectElement).value;
+  await setPaperSize(size);
+}
+
+async function handleVerticalSpacingChange(e: Event) {
+  const spacing = (e.target as HTMLSelectElement).value as 'default' | 'compact' | 'comfortable';
+  await setVerticalSpacing(spacing);
+}
+
+async function handleFontScaleChange(e: Event) {
+  const scale = parseInt((e.target as HTMLSelectElement).value, 10);
+  await setFontScale(scale);
+}
+
+async function handlePageWidthToggle(e: Event) {
+  const enabled = (e.target as HTMLInputElement).checked;
+  await setPageWidthMode(enabled);
+}
+
+async function handlePrintFontScaleChange(e: Event) {
+  const scale = parseInt((e.target as HTMLSelectElement).value, 10);
+  await setPrintFontScale(scale);
+}
+
+async function handlePrintVerticalSpacingChange(e: Event) {
+  const spacing = (e.target as HTMLSelectElement).value as 'default' | 'compact' | 'comfortable';
+  await setPrintVerticalSpacing(spacing);
 }
 
 async function handleExternalWarningToggle(e: Event) {
@@ -150,10 +180,17 @@ function close() {
           </button>
           <button
             class="tab"
-            :class="{ 'tab-active': activeTab === 'security' }"
-            @click="activeTab = 'security'"
+            :class="{ 'tab-active': activeTab === 'print' }"
+            @click="activeTab = 'print'"
           >
-            Security
+            Print
+          </button>
+          <button
+            class="tab"
+            :class="{ 'tab-active': activeTab === 'account' }"
+            @click="activeTab = 'account'"
+          >
+            Account
           </button>
           <button
             class="tab"
@@ -181,6 +218,53 @@ function close() {
                   {{ theme }}
                 </option>
               </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Font Size</span>
+              </label>
+              <select
+                class="select select-bordered w-full"
+                :value="preferences.fontScale"
+                @change="handleFontScaleChange"
+              >
+                <option :value="50">50%</option>
+                <option :value="75">75%</option>
+                <option :value="100">100% (Default)</option>
+                <option :value="150">150%</option>
+                <option :value="200">200%</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Vertical Spacing</span>
+              </label>
+              <select
+                class="select select-bordered w-full"
+                :value="preferences.verticalSpacing"
+                @change="handleVerticalSpacingChange"
+              >
+                <option value="compact">Compact</option>
+                <option value="default">Default</option>
+                <option value="comfortable">Comfortable</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Line wrapping</span>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary"
+                  :checked="preferences.pageWidthMode"
+                  @change="handlePageWidthToggle"
+                />
+              </label>
+              <label class="label">
+                <span class="label-text-alt">Constrain editor width to match the selected paper size</span>
+              </label>
             </div>
           </div>
 
@@ -229,8 +313,60 @@ function close() {
             </div>
           </div>
 
-          <!-- Security -->
-          <div v-if="activeTab === 'security'" class="space-y-4">
+          <!-- Print -->
+          <div v-if="activeTab === 'print'" class="space-y-4">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Paper Size</span>
+              </label>
+              <select
+                class="select select-bordered w-full"
+                :value="preferences.paperSize"
+                @change="handlePaperSizeChange"
+              >
+                <option value="A4">A4</option>
+                <option value="Letter">US Letter</option>
+                <option value="Legal">US Legal</option>
+                <option value="A3">A3</option>
+                <option value="A5">A5</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Font Size</span>
+              </label>
+              <select
+                class="select select-bordered w-full"
+                :value="preferences.printFontScale"
+                @change="handlePrintFontScaleChange"
+              >
+                <option :value="50">50%</option>
+                <option :value="75">75%</option>
+                <option :value="100">100% (Default)</option>
+                <option :value="150">150%</option>
+                <option :value="200">200%</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Vertical Spacing</span>
+              </label>
+              <select
+                class="select select-bordered w-full"
+                :value="preferences.printVerticalSpacing"
+                @change="handlePrintVerticalSpacingChange"
+              >
+                <option value="compact">Compact</option>
+                <option value="default">Default</option>
+                <option value="comfortable">Comfortable</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Account -->
+          <div v-if="activeTab === 'account'" class="space-y-4">
             <h3 class="font-medium">Change Password</h3>
 
             <div class="form-control">

@@ -57,6 +57,65 @@ html[data-theme-mode="focus"] .editor-wrap {
   @apply flex-1 overflow-auto p-4;
 }
 
+/* Vertical spacing — controlled via --spacing-factor custom property (set by JS).
+   compact = 0.15, default = 0.35, comfortable = 0.6 */
+.editor-wrap [data-slate-editor] {
+  --spacing-factor: 0.35;
+}
+
+.editor-wrap [data-slate-editor] h1 {
+  margin-top: calc(1.5rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] h2 {
+  margin-top: calc(1.25rem * var(--spacing-factor));
+  margin-bottom: calc(0.75rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] h3 {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(0.5rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] p {
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] ul,
+.editor-wrap [data-slate-editor] ol {
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] li {
+  margin-bottom: calc(0.25rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] blockquote {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] pre {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] img {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] hr {
+  margin-top: calc(1.5rem * var(--spacing-factor));
+  margin-bottom: calc(1.5rem * var(--spacing-factor));
+}
+
+.editor-wrap [data-slate-editor] table {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: max(1rem, calc(1rem * var(--spacing-factor)));
+}
+
 /* For focus theme - light editor on dark chrome */
 [data-theme='focus'] .wysimark-editor {
   @apply bg-white text-gray-900;
@@ -189,4 +248,203 @@ html[data-theme-mode="focus"] .editor-wrap {
 
 .wysimark-dropdown-item.active {
   @apply bg-primary/20 text-primary;
+}
+
+/* ===== Print styles ===== */
+@media print {
+  /* Hide all UI chrome */
+  aside,
+  .tab-bar,
+  .resize-handle,
+  .toast-container,
+  .modal-backdrop,
+  .context-menu {
+    display: none !important;
+  }
+
+  /* Hide editor toolbar (Wysimark toolbar wrapper) */
+  .editor-wrap > div > div > div:first-child {
+    display: none !important;
+  }
+
+  /* Hide everything in the editor column except the editor itself:
+     breadcrumb, attachment bar, hidden file inputs, modals.
+     Uses general sibling and the parent's children via :has(). */
+  .editor-wrap ~ * {
+    display: none !important;
+  }
+
+  /* Hide breadcrumb and attachment bar (siblings before .editor-wrap).
+     They are direct children of the EditorContainer root alongside .editor-wrap. */
+  *:has(> .editor-wrap) > *:not(.editor-wrap) {
+    display: none !important;
+  }
+
+  /* Remove viewport constraints so full content prints */
+  html, body, #app {
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Remove all flex/overflow constraints through the component tree */
+  #app > div,
+  #app > div > div,
+  main,
+  main > div,
+  .editor-wrap,
+  .editor-wrap > div,
+  .editor-wrap > div > div {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Let the Slate editor content flow naturally */
+  .editor-wrap [data-slate-editor] {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Print-friendly typography — black on white regardless of theme */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .editor-wrap,
+  .editor-wrap [data-slate-editor] {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Remove all borders/outlines from editor containers and Wysimark focus ring.
+     Wysimark uses --select-editor-color for the focus outline via Emotion (runtime),
+     so we neutralize the variable itself to avoid specificity battles. */
+  .editor-wrap,
+  .editor-wrap > div,
+  .editor-wrap > div > div,
+  .editor-wrap > div > div > div,
+  .editor-wrap .--focused {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    --select-editor-color: transparent !important;
+    --select-color: transparent !important;
+  }
+
+  .editor-wrap [data-slate-editor] {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Force browsers to print backgrounds (for code blocks, table headers, emojis) */
+  .editor-wrap * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Headings */
+  .editor-wrap h1,
+  .editor-wrap h2,
+  .editor-wrap h3,
+  .editor-wrap h4,
+  .editor-wrap h5,
+  .editor-wrap h6 {
+    color: black !important;
+    page-break-after: avoid;
+  }
+
+  /* Links — show URL and use dark color */
+  .editor-wrap a {
+    color: #1a0dab !important;
+    text-decoration: underline !important;
+  }
+
+  /* Code blocks — light gray background */
+  .editor-wrap pre {
+    background: #f0f0f0 !important;
+    border: 1px solid #d0d0d0 !important;
+    color: black !important;
+    page-break-inside: avoid;
+  }
+
+  /* Inline code — light gray background */
+  .editor-wrap code {
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+
+  /* Code inside pre blocks — transparent so pre background shows through */
+  .editor-wrap pre code {
+    background: transparent !important;
+  }
+
+  /* Code block language label: hide the dropdown chrome, show only the text.
+     Wysimark renders a contentEditable=false <span> (position: absolute, top-right)
+     inside each code block div, containing a <span> with the language name
+     and an SVG chevron. Target via the parent div that :has a [spellcheck=false]
+     descendant (unique to code block lines). */
+  .editor-wrap div:has([spellcheck="false"]) > span[contenteditable="false"] {
+    background: transparent !important;
+    cursor: default !important;
+    color: #888 !important;
+    font-size: 0.7em !important;
+    padding: 0.25em 0.5em !important;
+  }
+
+  /* Hide the dropdown chevron SVG */
+  .editor-wrap div:has([spellcheck="false"]) > span[contenteditable="false"] svg {
+    display: none !important;
+  }
+
+  /* Blockquotes */
+  .editor-wrap blockquote {
+    border-left-color: #999 !important;
+    color: #333 !important;
+  }
+
+  /* Tables */
+  .editor-wrap table {
+    border-collapse: collapse !important;
+  }
+
+  /* Table headers — light gray background with dark contrasting text */
+  .editor-wrap th {
+    background: #e8e8e8 !important;
+    color: #1a1a1a !important;
+    font-weight: 600 !important;
+    border: 1px solid #aaa !important;
+  }
+
+  .editor-wrap td {
+    border: 1px solid #aaa !important;
+    color: black !important;
+  }
+
+  /* Images */
+  .editor-wrap img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Override Wysimark CSS variable-based colors for print */
+  .editor-wrap {
+    --shade-50: #fafafa;
+    --shade-100: #f5f5f5;
+    --shade-200: #e5e5e5;
+    --shade-300: #d4d4d4;
+    --shade-400: #a3a3a3;
+    --shade-500: #737373;
+    --shade-600: #525252;
+    --shade-700: #404040;
+    --shade-800: #262626;
+    --shade-900: #171717;
+    --blue-50: #eff6ff;
+    --blue-100: #dbeafe;
+    --code-block-bgcolor: #f0f0f0;
+    --code-block-color: #171717;
+  }
 }

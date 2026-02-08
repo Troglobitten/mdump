@@ -5,6 +5,7 @@ export interface ToolbarButton {
   title: string;
   icon: string;
   onClick: () => void;
+  dividerBefore?: boolean;
 }
 
 const CUSTOM_ATTR = 'data-custom-toolbar';
@@ -155,6 +156,9 @@ export function useToolbarButtons(editorWrapRef: Ref<HTMLElement | null>) {
 
     toolbarInner.appendChild(createDividerEl());
     for (const button of buttons.values()) {
+      if (button.dividerBefore) {
+        toolbarInner.appendChild(createDividerEl());
+      }
       toolbarInner.appendChild(createButtonEl(button));
     }
   }

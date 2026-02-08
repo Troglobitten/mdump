@@ -58,6 +58,12 @@ export interface UserPreferences {
   sidebarWidth: number;
   sidebarCollapsed: boolean;
   defaultView: 'tree' | 'list' | 'grid';
+  paperSize: string;
+  verticalSpacing: 'default' | 'compact' | 'comfortable';
+  fontScale: number;
+  pageWidthMode: boolean;
+  printFontScale: number;
+  printVerticalSpacing: 'default' | 'compact' | 'comfortable';
 }
 
 export interface AppSettings {
@@ -151,4 +157,10 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   sidebarWidth: 280,
   sidebarCollapsed: false,
   defaultView: 'tree',
+  paperSize: 'A4',
+  verticalSpacing: 'default',
+  fontScale: 100,
+  pageWidthMode: false,
+  printFontScale: 100,
+  printVerticalSpacing: 'default',
 };

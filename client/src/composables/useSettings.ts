@@ -16,6 +16,8 @@ export function useSettings() {
     try {
       const prefs = await settingsApi.getPreferences();
       preferences.value = { ...DEFAULT_PREFERENCES, ...prefs };
+      applyPaperSize(preferences.value.paperSize);
+      applyEditorStyles();
       return preferences.value;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load preferences';
@@ -70,6 +72,99 @@ export function useSettings() {
     await updatePreferences({ externalChangeWarning: enabled });
   }
 
+  async function setPaperSize(size: string): Promise<void> {
+    await updatePreferences({ paperSize: size });
+    applyPaperSize(size);
+    applyEditorStyles();
+  }
+
+  async function setVerticalSpacing(spacing: 'default' | 'compact' | 'comfortable'): Promise<void> {
+    await updatePreferences({ verticalSpacing: spacing });
+    applyEditorStyles();
+  }
+
+  async function setFontScale(scale: number): Promise<void> {
+    await updatePreferences({ fontScale: scale });
+    applyEditorStyles();
+  }
+
+  async function setPageWidthMode(enabled: boolean): Promise<void> {
+    await updatePreferences({ pageWidthMode: enabled });
+    applyEditorStyles();
+  }
+
+  async function setPrintFontScale(scale: number): Promise<void> {
+    await updatePreferences({ printFontScale: scale });
+    applyEditorStyles();
+  }
+
+  async function setPrintVerticalSpacing(spacing: 'default' | 'compact' | 'comfortable'): Promise<void> {
+    await updatePreferences({ printVerticalSpacing: spacing });
+    applyEditorStyles();
+  }
+
+  function applyPaperSize(size: string) {
+    let styleEl = document.getElementById('print-page-size') as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'print-page-size';
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = `@page { size: ${size}; }`;
+  }
+
+  // Paper size → CSS width using physical units (cm for metric, in for US)
+  const PAGE_WIDTH_MAP: Record<string, string> = {
+    A5: '14.8cm',
+    A4: '21cm',
+    Letter: '8.5in',
+    Legal: '8.5in',
+    A3: '29.7cm',
+  };
+
+  const SPACING_MAP: Record<string, string> = {
+    compact: '0.15',
+    default: '0.35',
+    comfortable: '0.6',
+  };
+
+  function applyEditorStyles() {
+    let styleEl = document.getElementById('editor-custom-styles') as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'editor-custom-styles';
+      document.head.appendChild(styleEl);
+    }
+
+    // Screen styles
+    const factor = SPACING_MAP[preferences.value.verticalSpacing] || '0.35';
+    const fontSize = preferences.value.fontScale / 100;
+
+    const paperWidth = PAGE_WIDTH_MAP[preferences.value.paperSize] || '21cm';
+    const pageWidthPadding = preferences.value.pageWidthMode
+      ? `padding-left: max(2em, calc((100% - ${paperWidth}) / 2)) !important;
+         padding-right: max(2em, calc((100% - ${paperWidth}) / 2)) !important;`
+      : '';
+
+    // Print styles
+    const printFactor = SPACING_MAP[preferences.value.printVerticalSpacing] || '0.35';
+    const printFontSize = preferences.value.printFontScale / 100;
+
+    styleEl.textContent = `
+      .editor-wrap [data-slate-editor] {
+        --spacing-factor: ${factor};
+        font-size: ${fontSize}em;
+        ${pageWidthPadding}
+      }
+      @media print {
+        .editor-wrap [data-slate-editor] {
+          --spacing-factor: ${printFactor} !important;
+          font-size: ${printFontSize}em !important;
+        }
+      }
+    `;
+  }
+
   return {
     preferences: readonly(preferences),
     loading: readonly(loading),
@@ -82,5 +177,13 @@ export function useSettings() {
     setAutoSaveEnabled,
     setAutoSaveDebounce,
     setExternalChangeWarning,
+    setPaperSize,
+    applyPaperSize,
+    setVerticalSpacing,
+    setFontScale,
+    setPageWidthMode,
+    setPrintFontScale,
+    setPrintVerticalSpacing,
+    applyEditorStyles,
   };
 }
