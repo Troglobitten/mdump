@@ -8,9 +8,9 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - mdump-notes:/data/notes
-      - mdump-config:/data/config
-      - mdump-cache:/data/.image-cache
+      - ./data/notes:/data/notes
+      - ./data/config:/data/config
+      - ./data/.image-cache:/data/.image-cache
       # Optional: Mount TLS certificates for HTTPS
       # - /path/to/certs:/data/certs:ro
     environment:
@@ -31,10 +31,3 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
-volumes:
-  mdump-notes:
-    driver: local
-  mdump-config:
-    driver: local
-  mdump-cache:
-    driver: local
