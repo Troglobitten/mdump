@@ -2,6 +2,7 @@ import { ref, readonly } from 'vue';
 import type { UserPreferences } from '@mdump/shared';
 import { DEFAULT_PREFERENCES } from '@mdump/shared';
 import { settingsApi } from '@/api/client';
+import { useTheme } from '@/composables/useTheme';
 
 const preferences = ref<UserPreferences>({ ...DEFAULT_PREFERENCES });
 const loading = ref(false);
@@ -41,7 +42,8 @@ export function useSettings() {
 
   async function setTheme(theme: string): Promise<void> {
     await updatePreferences({ theme });
-    document.documentElement.setAttribute('data-theme', theme);
+    const { setTheme: applyTheme } = useTheme();
+    applyTheme(theme);
   }
 
   async function setSidebarWidth(width: number): Promise<void> {

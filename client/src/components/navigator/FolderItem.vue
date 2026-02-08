@@ -172,7 +172,7 @@ const contextMenuItems = computed(() => [
       @dragleave="handleDragLeave"
       @drop="handleDrop"
     >
-      <Folder class="w-10 h-10 text-warning" />
+      <Folder class="w-10 h-10 text-accent" />
       <span class="truncate w-full text-center text-xs">{{ node.name }}</span>
     </div>
 
@@ -197,7 +197,7 @@ const contextMenuItems = computed(() => [
       />
       <component
         :is="isExpanded ? FolderOpen : Folder"
-        class="w-4 h-4 flex-shrink-0 text-warning"
+        class="w-4 h-4 flex-shrink-0 text-accent"
       />
       <span class="truncate flex-1">{{ node.name }}</span>
     </div>

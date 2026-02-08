@@ -58,7 +58,7 @@ body {
 }
 
 .file-tree-item.active {
-  @apply bg-primary/20 text-primary;
+  @apply bg-primary/20 border-l-2 border-primary;
 }
 
 .file-tree-item.dirty::after {
@@ -78,7 +78,7 @@ body {
 }
 
 .file-grid-item.active {
-  @apply bg-primary/20 border-primary/40 text-primary;
+  @apply bg-primary/20 border-primary/40;
 }
 
 .file-grid-item.dirty::after {
@@ -199,7 +199,7 @@ body {
 }
 
 .search-result.active {
-  @apply bg-primary/20;
+  @apply bg-primary/20 border-l-2 border-primary;
 }
 
 .search-highlight {

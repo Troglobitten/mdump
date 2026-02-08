@@ -46,8 +46,8 @@ const TOOLTIP_LABEL_STYLES: Partial<CSSStyleDeclaration> = {
   fontSize: '0.875em',
   lineHeight: '1.5em',
   padding: '0 0.5em',
-  color: 'var(--shade-300)',
-  background: 'var(--shade-700)',
+  color: '#f0f0f0',
+  background: '#333',
   borderRadius: '0.25em',
   whiteSpace: 'nowrap',
   pointerEvents: 'none',
@@ -61,7 +61,7 @@ const TOOLTIP_ARROW_STYLES: Partial<CSSStyleDeclaration> = {
   height: '0',
   borderLeft: '0.375em solid transparent',
   borderRight: '0.375em solid transparent',
-  borderTop: '0.375em solid var(--shade-700)',
+  borderTop: '0.375em solid #333',
   pointerEvents: 'none',
 };
 

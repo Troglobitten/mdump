@@ -77,6 +77,8 @@ export function useTheme() {
       'acid',
       'lemonade',
       'winter',
+      'cyberpunk',
+      'nord',
     ];
 
     return lightThemes.includes(theme) ? 'light' : 'dark';

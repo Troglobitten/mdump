@@ -1,7 +1,9 @@
 /* Wysimark editor theme overrides */
 
-/* Dark mode: Override Wysimark's hardcoded light-mode CSS variables */
-[data-theme-mode="dark"] {
+/* Dark mode: Override Wysimark's hardcoded light-mode CSS variables.
+   Scoped to .editor-wrap so Wysimark's tooltip portals (rendered on document.body)
+   inherit the original light-mode shade values with good contrast. */
+html[data-theme-mode="dark"] .editor-wrap {
   --shade-50: oklch(var(--b2, 0.25 0 0));
   --shade-100: oklch(var(--b3, 0.22 0 0));
   --shade-200: oklch(var(--b3, 0.22 0 0));
@@ -12,12 +14,14 @@
   --shade-700: oklch(var(--bc, 0.85 0 0) / 0.8);
   --shade-800: oklch(var(--bc, 0.85 0 0) / 0.9);
   --shade-900: oklch(var(--bc, 0.85 0 0));
+  --blue-50: oklch(var(--b2, 0.25 0 0));
+  --blue-100: oklch(var(--b3, 0.22 0 0));
   --code-block-bgcolor: oklch(var(--b2, 0.25 0 0));
   --code-block-color: oklch(var(--bc, 0.85 0 0));
 }
 
 /* Focus theme: Keep light editor area (dark chrome, light editor) */
-[data-theme-mode="focus"] {
+html[data-theme-mode="focus"] .editor-wrap {
   --shade-50: rgb(250 250 250);
   --shade-100: rgb(245 245 245);
   --shade-200: rgb(229 229 229);
