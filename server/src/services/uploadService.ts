@@ -1,4 +1,4 @@
-import { mkdir, readdir, unlink, stat, writeFile } from 'fs/promises';
+import { mkdir, readdir, unlink, stat, writeFile, copyFile, rename } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { lookup } from 'mime-types';
@@ -44,13 +44,21 @@ export async function saveUpload(
   const existingFiles = await readdir(attachmentFolder);
   const uniqueName = generateUniqueFilename(baseName, existingFiles, ext);
 
-  // File is already saved by multer, we just need to return the path
-  // The multer destination should be configured to save to the attachment folder
+  // Move from multer temp location to the attachment folder.
+  // Use rename when possible, fall back to copy+delete for cross-device moves
+  // (e.g. Docker bind mounts where temp dir and notes dir are on different filesystems).
   const filePath = join(attachmentFolder, uniqueName);
 
-  // Actually, multer saves to a temp location, we need to move it
-  const { rename: renameFile } = await import('fs/promises');
-  await renameFile(file.path, filePath);
+  try {
+    await rename(file.path, filePath);
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === 'EXDEV') {
+      await copyFile(file.path, filePath);
+      await unlink(file.path);
+    } else {
+      throw err;
+    }
+  }
 
   // Process image: read dimensions, constrain oversized images
   let width: number | undefined;
