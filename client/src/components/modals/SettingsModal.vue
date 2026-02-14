@@ -9,7 +9,7 @@ import type { useToast } from '@/composables/useToast';
 
 const open = defineModel<boolean>('open', { default: false });
 
-const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing } = useSettings();
+const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug } = useSettings();
 const { availableThemes, currentTheme } = useTheme();
 const { changePassword, version } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
@@ -77,6 +77,14 @@ async function handleAutoSaveDebounce(e: Event) {
   const value = parseInt((e.target as HTMLInputElement).value, 10);
   if (value >= 500 && value <= 10000) {
     await setAutoSaveDebounce(value);
+  }
+}
+
+async function handleDebugToggle(e: Event) {
+  const enabled = (e.target as HTMLInputElement).checked;
+  await setDebug(enabled);
+  if (enabled) {
+    toast.info('Debug logging enabled - check browser console');
   }
 }
 
@@ -308,6 +316,23 @@ function close() {
                   class="toggle toggle-primary"
                   :checked="preferences.externalChangeWarning"
                   @change="handleExternalWarningToggle"
+                />
+              </label>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">
+                  Debug logging
+                  <span class="text-xs text-base-content/60 ml-2">(Console output for troubleshooting)</span>
+                </span>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary"
+                  :checked="preferences.debug"
+                  @change="handleDebugToggle"
                 />
               </label>
             </div>

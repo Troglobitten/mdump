@@ -103,6 +103,10 @@ export function useSettings() {
     applyEditorStyles();
   }
 
+  async function setDebug(enabled: boolean): Promise<void> {
+    await updatePreferences({ debug: enabled });
+  }
+
   function applyPaperSize(size: string) {
     let styleEl = document.getElementById('print-page-size') as HTMLStyleElement | null;
     if (!styleEl) {
@@ -151,13 +155,13 @@ export function useSettings() {
     const printFontSize = preferences.value.printFontScale / 100;
 
     styleEl.textContent = `
-      .editor-wrap [data-slate-editor] {
+      .editor-wrap .ProseMirror {
         --spacing-factor: ${factor};
         font-size: ${fontSize}em;
         ${pageWidthPadding}
       }
       @media print {
-        .editor-wrap [data-slate-editor] {
+        .editor-wrap .ProseMirror {
           --spacing-factor: ${printFactor} !important;
           font-size: ${printFontSize}em !important;
         }
@@ -184,6 +188,7 @@ export function useSettings() {
     setPageWidthMode,
     setPrintFontScale,
     setPrintVerticalSpacing,
+    setDebug,
     applyEditorStyles,
   };
 }

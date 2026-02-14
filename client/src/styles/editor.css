@@ -1,0 +1,215 @@
+/* Milkdown Crepe theme imports */
+@import '@milkdown/crepe/theme/common/style.css';
+@import '@milkdown/crepe/theme/frame.css';
+
+/* Note: Starting with default frame theme only.
+   Dark mode and focus theme support will be added later. */
+
+/* Editor container layout */
+.editor-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.editor-wrap > div {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Vertical spacing using --spacing-factor custom property */
+/* This will be set by useSettings.ts like before */
+.editor-wrap .ProseMirror {
+  --spacing-factor: 0.35;
+}
+
+.editor-wrap .ProseMirror h1 {
+  margin-top: calc(1.5rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror h2 {
+  margin-top: calc(1.25rem * var(--spacing-factor));
+  margin-bottom: calc(0.75rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror h3 {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(0.5rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror p {
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror ul,
+.editor-wrap .ProseMirror ol {
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror li {
+  margin-bottom: calc(0.25rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror blockquote {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror pre {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror img {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: calc(1rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror hr {
+  margin-top: calc(1.5rem * var(--spacing-factor));
+  margin-bottom: calc(1.5rem * var(--spacing-factor));
+}
+
+.editor-wrap .ProseMirror table {
+  margin-top: calc(1rem * var(--spacing-factor));
+  margin-bottom: max(1rem, calc(1rem * var(--spacing-factor)));
+}
+
+/* Print styles */
+@media print {
+  /* Hide all UI chrome */
+  aside,
+  .tab-bar,
+  .resize-handle,
+  .toast-container,
+  .modal-backdrop,
+  .context-menu {
+    display: none !important;
+  }
+
+  /* Hide toolbar, breadcrumb, attachment bar */
+  .milkdown-toolbar,
+  .breadcrumb,
+  .attachment-bar {
+    display: none !important;
+  }
+
+  /* Remove viewport constraints */
+  html, body, #app {
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Remove all flex/overflow constraints */
+  #app > div,
+  #app > div > div,
+  main,
+  main > div,
+  .editor-wrap,
+  .editor-wrap > div {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Let ProseMirror content flow naturally */
+  .editor-wrap .ProseMirror {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Print-friendly typography */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .editor-wrap,
+  .editor-wrap .ProseMirror {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Remove borders/outlines */
+  .editor-wrap,
+  .editor-wrap > div,
+  .editor-wrap .ProseMirror {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Force print backgrounds */
+  .editor-wrap * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Headings */
+  .editor-wrap h1,
+  .editor-wrap h2,
+  .editor-wrap h3,
+  .editor-wrap h4,
+  .editor-wrap h5,
+  .editor-wrap h6 {
+    color: black !important;
+    page-break-after: avoid;
+  }
+
+  /* Links */
+  .editor-wrap a {
+    color: #1a0dab !important;
+    text-decoration: underline !important;
+  }
+
+  /* Code blocks */
+  .editor-wrap pre {
+    background: #f0f0f0 !important;
+    border: 1px solid #d0d0d0 !important;
+    color: black !important;
+    page-break-inside: avoid;
+  }
+
+  .editor-wrap code {
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+
+  .editor-wrap pre code {
+    background: transparent !important;
+  }
+
+  /* Blockquotes */
+  .editor-wrap blockquote {
+    border-left-color: #999 !important;
+    color: #333 !important;
+  }
+
+  /* Tables */
+  .editor-wrap table {
+    border-collapse: collapse !important;
+  }
+
+  .editor-wrap th {
+    background: #e8e8e8 !important;
+    color: #1a1a1a !important;
+    font-weight: 600 !important;
+    border: 1px solid #aaa !important;
+  }
+
+  .editor-wrap td {
+    border: 1px solid #aaa !important;
+    color: black !important;
+  }
+
+  /* Images */
+  .editor-wrap img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+}

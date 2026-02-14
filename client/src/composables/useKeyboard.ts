@@ -12,6 +12,7 @@ function getShortcutKey(e: KeyboardEvent): string {
   if (e.altKey) parts.push('alt');
 
   // Normalize key name
+  if (!e.key) return '';
   let key = e.key.toLowerCase();
   if (key === ' ') key = 'space';
   if (key === 'escape') key = 'esc';

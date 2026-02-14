@@ -64,6 +64,7 @@ export interface UserPreferences {
   pageWidthMode: boolean;
   printFontScale: number;
   printVerticalSpacing: 'default' | 'compact' | 'comfortable';
+  debug: boolean;
 }
 
 export interface AppSettings {
@@ -163,4 +164,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   pageWidthMode: false,
   printFontScale: 100,
   printVerticalSpacing: 'default',
+  debug: false,
 };
