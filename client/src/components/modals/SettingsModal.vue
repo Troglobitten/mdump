@@ -9,7 +9,7 @@ import type { useToast } from '@/composables/useToast';
 
 const open = defineModel<boolean>('open', { default: false });
 
-const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug } = useSettings();
+const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug, setMdumpThemedEditor, setEditorFont } = useSettings();
 const { availableThemes, currentTheme } = useTheme();
 const { changePassword, version } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
@@ -86,6 +86,16 @@ async function handleDebugToggle(e: Event) {
   if (enabled) {
     toast.info('Debug logging enabled - check browser console');
   }
+}
+
+async function handleMdumpThemedEditorToggle(e: Event) {
+  const enabled = (e.target as HTMLInputElement).checked;
+  await setMdumpThemedEditor(enabled);
+}
+
+async function handleEditorFontChange(e: Event) {
+  const font = (e.target as HTMLSelectElement).value as 'Inter' | 'Work Sans' | 'Merriweather' | 'Lora' | 'Fira Code';
+  await setEditorFont(font);
 }
 
 async function handlePaperSizeChange(e: Event) {
@@ -226,6 +236,53 @@ function close() {
                   {{ theme }}
                 </option>
               </select>
+            </div>
+
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">
+                  mdump themed editor
+                  <span class="text-xs text-base-content/60 ml-2">(Match editor colors to UI theme)</span>
+                </span>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary"
+                  :checked="preferences.mdumpThemedEditor"
+                  @change="handleMdumpThemedEditorToggle"
+                />
+              </label>
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Editor Font</span>
+              </label>
+              <div class="space-y-2">
+                <label
+                  v-for="font in ['Inter', 'Work Sans', 'Merriweather', 'Lora', 'Fira Code']"
+                  :key="font"
+                  class="flex items-center gap-3 p-3 border border-base-300 rounded-lg cursor-pointer hover:bg-base-200 transition-colors"
+                  :class="{ 'border-primary bg-primary/10': preferences.editorFont === font }"
+                >
+                  <input
+                    type="radio"
+                    name="editorFont"
+                    :value="font"
+                    :checked="preferences.editorFont === font"
+                    @change="handleEditorFontChange"
+                    class="radio radio-primary radio-sm"
+                  />
+                  <div class="flex-1">
+                    <div class="font-medium text-sm">{{ font }}</div>
+                    <div
+                      class="text-base-content/70 mt-1"
+                      :style="{ fontFamily: `'${font}', ${font === 'Fira Code' ? 'monospace' : font === 'Merriweather' || font === 'Lora' ? 'serif' : 'sans-serif'}` }"
+                    >
+                      The quick brown fox jumps over the lazy dog
+                    </div>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div class="form-control">

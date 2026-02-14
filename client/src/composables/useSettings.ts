@@ -18,6 +18,7 @@ export function useSettings() {
       preferences.value = { ...DEFAULT_PREFERENCES, ...prefs };
       applyPaperSize(preferences.value.paperSize);
       applyEditorStyles();
+      applyEditorTheming();
       return preferences.value;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to load preferences';
@@ -107,6 +108,23 @@ export function useSettings() {
     await updatePreferences({ debug: enabled });
   }
 
+  async function setMdumpThemedEditor(enabled: boolean): Promise<void> {
+    await updatePreferences({ mdumpThemedEditor: enabled });
+    applyEditorTheming();
+  }
+
+  async function setEditorFont(font: 'Inter' | 'Work Sans' | 'Merriweather' | 'Lora' | 'Fira Code'): Promise<void> {
+    await updatePreferences({ editorFont: font });
+    applyEditorStyles();
+  }
+
+  function applyEditorTheming() {
+    document.documentElement.setAttribute(
+      'data-mdump-themed-editor',
+      String(preferences.value.mdumpThemedEditor)
+    );
+  }
+
   function applyPaperSize(size: string) {
     let styleEl = document.getElementById('print-page-size') as HTMLStyleElement | null;
     if (!styleEl) {
@@ -132,6 +150,14 @@ export function useSettings() {
     comfortable: '0.6',
   };
 
+  const FONT_MAP: Record<string, string> = {
+    Inter: '"Inter", sans-serif',
+    'Work Sans': '"Work Sans", sans-serif',
+    Merriweather: '"Merriweather", serif',
+    Lora: '"Lora", serif',
+    'Fira Code': '"Fira Code", monospace',
+  };
+
   function applyEditorStyles() {
     let styleEl = document.getElementById('editor-custom-styles') as HTMLStyleElement | null;
     if (!styleEl) {
@@ -143,6 +169,7 @@ export function useSettings() {
     // Screen styles
     const factor = SPACING_MAP[preferences.value.verticalSpacing] || '0.35';
     const fontSize = preferences.value.fontScale / 100;
+    const fontFamily = FONT_MAP[preferences.value.editorFont] || FONT_MAP.Inter;
 
     const paperWidth = PAGE_WIDTH_MAP[preferences.value.paperSize] || '21cm';
     const pageWidthPadding = preferences.value.pageWidthMode
@@ -155,11 +182,20 @@ export function useSettings() {
     const printFontSize = preferences.value.printFontScale / 100;
 
     styleEl.textContent = `
+      /* Set Milkdown font CSS variables */
+      .milkdown {
+        --crepe-font-title: ${fontFamily};
+        --crepe-font-default: ${fontFamily};
+        --crepe-font-code: "Fira Code", monospace;
+      }
+
+      /* Font size and spacing (Milkdown doesn't have variables for these) */
       .editor-wrap .ProseMirror {
         --spacing-factor: ${factor};
         font-size: ${fontSize}em;
         ${pageWidthPadding}
       }
+
       @media print {
         .editor-wrap .ProseMirror {
           --spacing-factor: ${printFactor} !important;
@@ -189,6 +225,8 @@ export function useSettings() {
     setPrintFontScale,
     setPrintVerticalSpacing,
     setDebug,
+    setMdumpThemedEditor,
+    setEditorFont,
     applyEditorStyles,
   };
 }

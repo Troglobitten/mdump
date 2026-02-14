@@ -125,4 +125,6 @@ export const preferencesSchema = z.object({
   printFontScale: z.union([z.literal(50), z.literal(75), z.literal(100), z.literal(150), z.literal(200)]).optional(),
   printVerticalSpacing: z.enum(['default', 'compact', 'comfortable']).optional(),
   debug: z.boolean().optional(),
+  mdumpThemedEditor: z.boolean().optional(),
+  editorFont: z.enum(['Inter', 'Work Sans', 'Merriweather', 'Lora', 'Fira Code']).optional(),
 }).partial();

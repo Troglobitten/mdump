@@ -30,7 +30,6 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     vendor: ['vue'],
-                    editor: ['@wysimark/vue', 'react', 'react-dom'],
                 },
             },
         },

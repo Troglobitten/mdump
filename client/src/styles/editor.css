@@ -2,8 +2,101 @@
 @import '@milkdown/crepe/theme/common/style.css';
 @import '@milkdown/crepe/theme/frame.css';
 
-/* Note: Starting with default frame theme only.
-   Dark mode and focus theme support will be added later. */
+/* Theme Switching Logic:
+   - When mdump themed editor is DISABLED: Use Milkdown's frame theme (current behavior)
+   - When mdump themed editor is ENABLED: Use DaisyUI theme colors
+   - Focus theme exception: Always use light editor
+*/
+
+/* === MILKDOWN THEMED (Disabled - use Milkdown's own themes) === */
+
+/* Light mode with Milkdown theme */
+html[data-mdump-themed-editor="false"][data-theme-mode="light"] .milkdown {
+  /* Uses default frame.css (already imported) */
+}
+
+/* Dark mode with Milkdown theme */
+html[data-mdump-themed-editor="false"][data-theme-mode="dark"] .milkdown {
+  --crepe-color-background: #1a1a1a;
+  --crepe-color-on-background: #e6e6e6;
+  --crepe-color-surface: #121212;
+  --crepe-color-surface-low: #1c1c1c;
+  --crepe-color-on-surface: #d1d1d1;
+  --crepe-color-on-surface-variant: #a9a9a9;
+  --crepe-color-outline: #757575;
+  --crepe-color-primary: #b5b5b5;
+  --crepe-color-secondary: #4d4d4d;
+  --crepe-color-on-secondary: #d6d6d6;
+  --crepe-color-inverse: #e5e5e5;
+  --crepe-color-on-inverse: #2a2a2a;
+  --crepe-color-inline-code: #ff6666;
+  --crepe-color-error: #ff6666;
+  --crepe-color-hover: #232323;
+  --crepe-color-selected: #2f2f2f;
+  --crepe-color-inline-area: #2b2b2b;
+
+  --crepe-shadow-1:
+    0px 1px 2px 0px rgba(255, 255, 255, 0.3),
+    0px 1px 3px 1px rgba(255, 255, 255, 0.15);
+  --crepe-shadow-2:
+    0px 1px 2px 0px rgba(255, 255, 255, 0.3),
+    0px 2px 6px 2px rgba(255, 255, 255, 0.15);
+}
+
+/* Focus theme with Milkdown theme (light editor on dark UI) */
+html[data-mdump-themed-editor="false"][data-theme-mode="focus"] .milkdown {
+  /* Uses default frame.css (light theme) */
+}
+
+/* === MDUMP THEMED (Enabled - use DaisyUI colors) === */
+
+/* Light themes with DaisyUI colors */
+html[data-mdump-themed-editor="true"][data-theme-mode="light"] .milkdown {
+  --crepe-color-background: oklch(var(--b1));
+  --crepe-color-on-background: oklch(var(--bc));
+  --crepe-color-surface: oklch(var(--b2));
+  --crepe-color-surface-low: oklch(var(--b3));
+  --crepe-color-on-surface: oklch(var(--bc));
+  --crepe-color-on-surface-variant: color-mix(in oklch, oklch(var(--bc)), transparent 30%);
+  --crepe-color-outline: oklch(var(--bc) / 0.4);
+  --crepe-color-primary: oklch(var(--p));
+  --crepe-color-secondary: oklch(var(--s));
+  --crepe-color-on-secondary: oklch(var(--sc));
+  --crepe-color-inverse: oklch(var(--b3));
+  --crepe-color-on-inverse: oklch(var(--bc));
+  --crepe-color-inline-code: oklch(var(--er));
+  --crepe-color-error: oklch(var(--er));
+  --crepe-color-hover: color-mix(in oklch, oklch(var(--b2)), oklch(var(--bc)) 5%);
+  --crepe-color-selected: color-mix(in oklch, oklch(var(--b2)), oklch(var(--bc)) 10%);
+  --crepe-color-inline-area: oklch(var(--b3));
+}
+
+/* Dark themes with DaisyUI colors */
+html[data-mdump-themed-editor="true"][data-theme-mode="dark"] .milkdown {
+  --crepe-color-background: oklch(var(--b1));
+  --crepe-color-on-background: oklch(var(--bc));
+  --crepe-color-surface: oklch(var(--b2));
+  --crepe-color-surface-low: oklch(var(--b3));
+  --crepe-color-on-surface: oklch(var(--bc));
+  --crepe-color-on-surface-variant: color-mix(in oklch, oklch(var(--bc)), transparent 30%);
+  --crepe-color-outline: oklch(var(--bc) / 0.4);
+  --crepe-color-primary: oklch(var(--p));
+  --crepe-color-secondary: oklch(var(--s));
+  --crepe-color-on-secondary: oklch(var(--sc));
+  --crepe-color-inverse: oklch(var(--b3));
+  --crepe-color-on-inverse: oklch(var(--bc));
+  --crepe-color-inline-code: oklch(var(--er));
+  --crepe-color-error: oklch(var(--er));
+  --crepe-color-hover: color-mix(in oklch, oklch(var(--b2)), oklch(var(--bc)) 5%);
+  --crepe-color-selected: color-mix(in oklch, oklch(var(--b2)), oklch(var(--bc)) 10%);
+  --crepe-color-inline-area: oklch(var(--b3));
+}
+
+/* Focus theme with DaisyUI colors (EXCEPTION: keep light editor) */
+html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
+  /* Use light Milkdown theme (frame.css default) - don't theme it */
+  /* This preserves the contrast of light editor on dark UI */
+}
 
 /* Editor container layout */
 .editor-wrap {
