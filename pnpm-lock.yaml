@@ -23,12 +23,30 @@ importers:
       '@mdump/shared':
         specifier: workspace:*
         version: link:../shared
+      '@milkdown/core':
+        specifier: ^7.5.1
+        version: 7.18.0
       '@milkdown/crepe':
         specifier: ^7.5.1
         version: 7.18.0(typescript@5.9.3)
+      '@milkdown/preset-commonmark':
+        specifier: ^7.5.1
+        version: 7.18.0
+      '@milkdown/preset-gfm':
+        specifier: ^7.5.1
+        version: 7.18.0
+      '@milkdown/utils':
+        specifier: ^7.18.0
+        version: 7.18.0
       lucide-vue-next:
         specifier: ^0.344.0
         version: 0.344.0(vue@3.5.27)
+      prosemirror-commands:
+        specifier: ^1.7.1
+        version: 1.7.1
+      unist-util-visit:
+        specifier: ^5.1.0
+        version: 5.1.0
       vue:
         specifier: ^3.4.21
         version: 3.5.27(typescript@5.9.3)
