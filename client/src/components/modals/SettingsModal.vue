@@ -94,7 +94,7 @@ async function handleMdumpThemedEditorToggle(e: Event) {
 }
 
 async function handleEditorFontChange(e: Event) {
-  const font = (e.target as HTMLSelectElement).value as 'Inter' | 'Work Sans' | 'Merriweather' | 'Lora' | 'Fira Code';
+  const font = (e.target as HTMLInputElement).value as 'sans-serif' | 'serif' | 'monospace';
   await setEditorFont(font);
 }
 
@@ -257,30 +257,32 @@ function close() {
               <label class="label">
                 <span class="label-text">Editor Font</span>
               </label>
-              <div class="space-y-2">
+              <div class="grid grid-cols-3 gap-3">
                 <label
-                  v-for="font in ['Inter', 'Work Sans', 'Merriweather', 'Lora', 'Fira Code']"
-                  :key="font"
-                  class="flex items-center gap-3 p-3 border border-base-300 rounded-lg cursor-pointer hover:bg-base-200 transition-colors"
-                  :class="{ 'border-primary bg-primary/10': preferences.editorFont === font }"
+                  v-for="font in [
+                    { value: 'sans-serif', label: 'Sans Serif' },
+                    { value: 'serif', label: 'Serif' },
+                    { value: 'monospace', label: 'Monospace' }
+                  ]"
+                  :key="font.value"
+                  class="flex flex-col items-center gap-2 p-4 border border-base-300 rounded-lg cursor-pointer hover:bg-base-200 transition-colors"
+                  :class="{ 'border-primary bg-primary/10': preferences.editorFont === font.value }"
                 >
                   <input
                     type="radio"
                     name="editorFont"
-                    :value="font"
-                    :checked="preferences.editorFont === font"
+                    :value="font.value"
+                    :checked="preferences.editorFont === font.value"
                     @change="handleEditorFontChange"
                     class="radio radio-primary radio-sm"
                   />
-                  <div class="flex-1">
-                    <div class="font-medium text-sm">{{ font }}</div>
-                    <div
-                      class="text-base-content/70 mt-1"
-                      :style="{ fontFamily: `'${font}', ${font === 'Fira Code' ? 'monospace' : font === 'Merriweather' || font === 'Lora' ? 'serif' : 'sans-serif'}` }"
-                    >
-                      The quick brown fox jumps over the lazy dog
-                    </div>
+                  <div
+                    class="text-4xl font-normal"
+                    :style="{ fontFamily: font.value }"
+                  >
+                    Aa
                   </div>
+                  <div class="text-xs text-base-content/70 text-center">{{ font.label }}</div>
                 </label>
               </div>
             </div>

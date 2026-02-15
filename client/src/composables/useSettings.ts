@@ -113,7 +113,7 @@ export function useSettings() {
     applyEditorTheming();
   }
 
-  async function setEditorFont(font: 'Inter' | 'Work Sans' | 'Merriweather' | 'Lora' | 'Fira Code'): Promise<void> {
+  async function setEditorFont(font: 'sans-serif' | 'serif' | 'monospace'): Promise<void> {
     await updatePreferences({ editorFont: font });
     applyEditorStyles();
   }
@@ -151,11 +151,9 @@ export function useSettings() {
   };
 
   const FONT_MAP: Record<string, string> = {
-    Inter: '"Inter", sans-serif',
-    'Work Sans': '"Work Sans", sans-serif',
-    Merriweather: '"Merriweather", serif',
-    Lora: '"Lora", serif',
-    'Fira Code': '"Fira Code", monospace',
+    'sans-serif': 'Inter, Arial, Helvetica, sans-serif',
+    'serif': 'Georgia, "Times New Roman", Times, serif',
+    'monospace': 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   };
 
   function applyEditorStyles() {
@@ -169,7 +167,7 @@ export function useSettings() {
     // Screen styles
     const factor = SPACING_MAP[preferences.value.verticalSpacing] || '0.35';
     const fontSize = preferences.value.fontScale / 100;
-    const fontFamily = FONT_MAP[preferences.value.editorFont] || FONT_MAP.Inter;
+    const fontFamily = FONT_MAP[preferences.value.editorFont] || FONT_MAP['sans-serif'];
 
     const paperWidth = PAGE_WIDTH_MAP[preferences.value.paperSize] || '21cm';
     const pageWidthPadding = preferences.value.pageWidthMode
@@ -186,7 +184,7 @@ export function useSettings() {
       .milkdown {
         --crepe-font-title: ${fontFamily};
         --crepe-font-default: ${fontFamily};
-        --crepe-font-code: "Fira Code", monospace;
+        --crepe-font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
       }
 
       /* Font size and spacing (Milkdown doesn't have variables for these) */

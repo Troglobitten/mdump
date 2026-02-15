@@ -126,5 +126,5 @@ export const preferencesSchema = z.object({
   printVerticalSpacing: z.enum(['default', 'compact', 'comfortable']).optional(),
   debug: z.boolean().optional(),
   mdumpThemedEditor: z.boolean().optional(),
-  editorFont: z.enum(['Inter', 'Work Sans', 'Merriweather', 'Lora', 'Fira Code']).optional(),
+  editorFont: z.enum(['sans-serif', 'serif', 'monospace']).optional(),
 }).partial();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, inject, computed, nextTick, type Ref } from 'vue';
-import { Crepe } from '@milkdown/crepe';
+import { Crepe, CrepeFeature } from '@milkdown/crepe';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
@@ -91,6 +91,9 @@ async function createEditor() {
     crepe = new Crepe({
       root: editorEl.value,
       defaultValue: content.value || '# Welcome\n\nStart writing...',
+      features: {
+        [CrepeFeature.Latex]: false,
+      },
     });
 
     debug.time('Crepe initialization');

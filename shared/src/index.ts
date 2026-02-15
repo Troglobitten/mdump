@@ -66,7 +66,7 @@ export interface UserPreferences {
   printVerticalSpacing: 'default' | 'compact' | 'comfortable';
   debug: boolean;
   mdumpThemedEditor: boolean;
-  editorFont: 'Inter' | 'Work Sans' | 'Merriweather' | 'Lora' | 'Fira Code';
+  editorFont: 'sans-serif' | 'serif' | 'monospace';
 }
 
 export interface AppSettings {
@@ -168,5 +168,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   printVerticalSpacing: 'default',
   debug: false,
   mdumpThemedEditor: true,
-  editorFont: 'Inter',
+  editorFont: 'sans-serif',
 };
