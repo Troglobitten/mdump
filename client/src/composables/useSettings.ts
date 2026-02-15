@@ -16,6 +16,28 @@ export function useSettings() {
     try {
       const prefs = await settingsApi.getPreferences();
       preferences.value = { ...DEFAULT_PREFERENCES, ...prefs };
+
+      // Migrate toolbar config: add missing default items to existing configs
+      if (preferences.value.toolbarConfig) {
+        const currentItems = preferences.value.toolbarConfig.items;
+        const defaultItems = DEFAULT_PREFERENCES.toolbarConfig.items;
+        const currentIds = new Set(currentItems.map(item => item.id));
+
+        // Find items in default config that are missing from current config
+        const missingItems = defaultItems.filter(item => !currentIds.has(item.id));
+
+        if (missingItems.length > 0) {
+          // Add missing items and update
+          const updatedItems = [...currentItems, ...missingItems];
+          preferences.value.toolbarConfig.items = updatedItems;
+
+          // Save the migrated config
+          await settingsApi.updatePreferences({
+            toolbarConfig: preferences.value.toolbarConfig,
+          });
+        }
+      }
+
       applyPaperSize(preferences.value.paperSize);
       applyEditorStyles();
       applyEditorTheming();
@@ -116,6 +138,13 @@ export function useSettings() {
   async function setEditorFont(font: 'sans-serif' | 'serif' | 'monospace'): Promise<void> {
     await updatePreferences({ editorFont: font });
     applyEditorStyles();
+  }
+
+  async function updateToolbarConfig(config: Partial<import('@mdump/shared').ToolbarConfig>): Promise<void> {
+    const currentConfig = preferences.value.toolbarConfig;
+    await updatePreferences({
+      toolbarConfig: { ...currentConfig, ...config },
+    });
   }
 
   function applyEditorTheming() {
@@ -225,6 +254,7 @@ export function useSettings() {
     setDebug,
     setMdumpThemedEditor,
     setEditorFont,
+    updateToolbarConfig,
     applyEditorStyles,
   };
 }

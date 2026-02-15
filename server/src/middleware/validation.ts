@@ -107,6 +107,16 @@ export const searchQuerySchema = z.object({
   limit: z.coerce.number().positive().optional(),
 });
 
+const toolbarUserPreferenceSchema = z.object({
+  id: z.string(),
+  visible: z.boolean(),
+  order: z.number(),
+});
+
+const toolbarConfigSchema = z.object({
+  items: z.array(toolbarUserPreferenceSchema),
+});
+
 export const preferencesSchema = z.object({
   theme: z.string().optional(),
   autoSave: z.object({
@@ -127,4 +137,5 @@ export const preferencesSchema = z.object({
   debug: z.boolean().optional(),
   mdumpThemedEditor: z.boolean().optional(),
   editorFont: z.enum(['sans-serif', 'serif', 'monospace']).optional(),
+  toolbarConfig: toolbarConfigSchema.optional(),
 }).partial();

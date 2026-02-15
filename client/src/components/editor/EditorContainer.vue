@@ -292,8 +292,8 @@ const pasteModalOpen = ref(false);
 const linkModalOpen = ref(false);
 const linkUrl = ref('');
 const linkTitle = ref('');
-const blockStyleDropdownRef = ref<HTMLDivElement | null>(null);
-const listDropdownRef = ref<HTMLDivElement | null>(null);
+const blockStyleDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
+const listDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
 
 // Milkdown Crepe instance
 let crepe: Crepe | null = null;
@@ -317,6 +317,106 @@ const listDropdownOpen = ref(false);
 const customMarksActiveState = new Map<string, Ref<boolean>>();
 customMarkConfigs.forEach(config => {
   customMarksActiveState.set(config.name, ref(false));
+});
+
+// Toolbar button definitions (metadata - not user preferences)
+interface ToolbarButtonDefinition {
+  id: string;
+  type: 'button' | 'dropdown' | 'divider';
+  buttonType?: 'mark' | 'block' | 'insert' | 'custom';
+  action?: string;
+  icon?: any;
+  title?: string;
+  dropdownType?: 'block-style' | 'list';
+}
+
+const TOOLBAR_BUTTON_DEFINITIONS: ToolbarButtonDefinition[] = [
+  { id: 'block-style-dropdown', type: 'dropdown', dropdownType: 'block-style' },
+  { id: 'list-dropdown', type: 'dropdown', dropdownType: 'list' },
+  { id: 'divider-1', type: 'divider' },
+  { id: 'divider-2', type: 'divider' },
+  { id: 'divider-3', type: 'divider' },
+  { id: 'bold', type: 'button', buttonType: 'mark', action: 'toggleBold', icon: Bold, title: 'Bold' },
+  { id: 'italic', type: 'button', buttonType: 'mark', action: 'toggleItalic', icon: Italic, title: 'Italic' },
+  { id: 'strikethrough', type: 'button', buttonType: 'mark', action: 'toggleStrikethrough', icon: Strikethrough, title: 'Strikethrough' },
+  { id: 'link', type: 'button', buttonType: 'mark', action: 'toggleLink', icon: Link, title: 'Link' },
+  { id: 'superscript', type: 'button', buttonType: 'custom', action: 'superscript', icon: Superscript, title: 'Superscript' },
+  { id: 'subscript', type: 'button', buttonType: 'custom', action: 'subscript', icon: Subscript, title: 'Subscript' },
+  { id: 'marker', type: 'button', buttonType: 'custom', action: 'marker', icon: Highlighter, title: 'Highlight' },
+  { id: 'code-block', type: 'button', buttonType: 'block', action: 'toggleCodeBlock', icon: Code, title: 'Code Block' },
+  { id: 'blockquote', type: 'button', buttonType: 'block', action: 'toggleBlockquote', icon: Quote, title: 'Quote' },
+  { id: 'horizontal-rule', type: 'button', buttonType: 'insert', action: 'insertHorizontalRule', icon: Minus, title: 'Horizontal Line' },
+];
+
+// Create a lookup map for quick access
+const buttonDefinitionsMap = new Map(TOOLBAR_BUTTON_DEFINITIONS.map(def => [def.id, def]));
+
+// Action handler function - handles both built-in and custom mark actions
+function handleToolbarAction(action: string) {
+  // Check if it's a built-in action
+  const builtInActions: Record<string, () => void> = {
+    toggleBold,
+    toggleItalic,
+    toggleStrikethrough,
+    toggleLink,
+    toggleCodeBlock,
+    toggleBlockquote,
+    insertHorizontalRule,
+  };
+
+  if (builtInActions[action]) {
+    builtInActions[action]();
+  } else {
+    // Assume it's a custom mark name
+    toggleCustomMark(action);
+  }
+}
+
+// Get active state for a button
+function getButtonActiveState(item: any): boolean {
+  const activeStateMap: Record<string, Ref<boolean>> = {
+    toggleBold: isBoldActive,
+    toggleItalic: isItalicActive,
+    toggleStrikethrough: isStrikethroughActive,
+    toggleLink: isLinkActive,
+    toggleCodeBlock: isCodeBlockActive,
+    toggleBlockquote: isBlockquoteActive,
+  };
+
+  if (activeStateMap[item.action]) {
+    return activeStateMap[item.action].value;
+  }
+
+  // Check custom marks
+  if (item.buttonType === 'custom' && customMarksActiveState.has(item.action)) {
+    return customMarksActiveState.get(item.action)!.value;
+  }
+
+  return false;
+}
+
+// Computed toolbar items - merges button definitions with user preferences
+const computedToolbarItems = computed(() => {
+  const config = preferences.value.toolbarConfig;
+  if (!config) return [];
+
+  // Merge user preferences with button definitions
+  return config.items
+    .filter(pref => pref.visible)
+    .map(pref => {
+      const definition = buttonDefinitionsMap.get(pref.id);
+      if (!definition) {
+        debug.warn(`Unknown toolbar item: ${pref.id}`);
+        return null;
+      }
+      return {
+        ...definition,
+        visible: pref.visible,
+        order: pref.order,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => a.order - b.order);
 });
 
 const isDirty = computed(() => content.value !== lastSavedContent.value);
@@ -857,10 +957,19 @@ let unsubscribeShortcut: (() => void) | null = null;
 
 // Close dropdown when clicking outside
 function handleClickOutside(event: MouseEvent) {
-  if (blockStyleDropdownRef.value && !blockStyleDropdownRef.value.contains(event.target as Node)) {
+  // Handle blockStyleDropdownRef (may be array due to v-for)
+  const blockDropdown = Array.isArray(blockStyleDropdownRef.value)
+    ? blockStyleDropdownRef.value[0]
+    : blockStyleDropdownRef.value;
+  if (blockDropdown && !blockDropdown.contains(event.target as Node)) {
     blockStyleDropdownOpen.value = false;
   }
-  if (listDropdownRef.value && !listDropdownRef.value.contains(event.target as Node)) {
+
+  // Handle listDropdownRef (may be array due to v-for)
+  const listDropdown = Array.isArray(listDropdownRef.value)
+    ? listDropdownRef.value[0]
+    : listDropdownRef.value;
+  if (listDropdown && !listDropdown.contains(event.target as Node)) {
     listDropdownOpen.value = false;
   }
 }
@@ -937,178 +1046,90 @@ watch(externalReloadPath, (path) => {
 
     <!-- Custom Toolbar -->
     <div v-if="!loading" class="flex items-center gap-1 py-0.5 px-3 border-b border-base-300 bg-base-200/50">
-      <!-- Block Style Dropdown -->
-      <div ref="blockStyleDropdownRef" class="relative">
-        <button
-          type="button"
-          class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
-          @mousedown.prevent
-          @click="blockStyleDropdownOpen = !blockStyleDropdownOpen"
-          title="Text style"
-        >
-          <component :is="blockTypeIcons[currentBlockType]" :size="16" />
-          <ChevronDown :size="12" />
-        </button>
+      <template v-for="item in computedToolbarItems" :key="item.id">
+        <!-- Divider -->
+        <div v-if="item.type === 'divider'" class="w-px h-5 bg-base-300 mx-1"></div>
 
-        <!-- Dropdown menu -->
-        <div
-          v-if="blockStyleDropdownOpen"
-          class="absolute top-full left-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[160px]"
-          @mousedown.prevent
-        >
+        <!-- Block Style Dropdown -->
+        <div v-else-if="item.type === 'dropdown' && item.dropdownType === 'block-style'" ref="blockStyleDropdownRef" class="relative">
           <button
-            v-for="type in ['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']"
-            :key="type"
             type="button"
-            class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
-            :class="{ 'bg-base-200 text-primary': currentBlockType === type }"
-            @click="setBlockType(type as any)"
+            class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
+            @mousedown.prevent
+            @click="blockStyleDropdownOpen = !blockStyleDropdownOpen"
+            title="Text style"
           >
-            <component :is="blockTypeIcons[type as keyof typeof blockTypeIcons]" :size="16" />
-            <span>{{ blockTypeLabels[type as keyof typeof blockTypeLabels] }}</span>
+            <component :is="blockTypeIcons[currentBlockType]" :size="16" />
+            <ChevronDown :size="12" />
           </button>
+
+          <!-- Dropdown menu -->
+          <div
+            v-if="blockStyleDropdownOpen"
+            class="absolute top-full left-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[160px]"
+            @mousedown.prevent
+          >
+            <button
+              v-for="type in ['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']"
+              :key="type"
+              type="button"
+              class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
+              :class="{ 'bg-base-200 text-primary': currentBlockType === type }"
+              @click="setBlockType(type as any)"
+            >
+              <component :is="blockTypeIcons[type as keyof typeof blockTypeIcons]" :size="16" />
+              <span>{{ blockTypeLabels[type as keyof typeof blockTypeLabels] }}</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- Divider -->
-      <div class="w-px h-5 bg-base-300 mx-1"></div>
-
-      <!-- List Dropdown -->
-      <div ref="listDropdownRef" class="relative">
-        <button
-          type="button"
-          class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
-          :class="{ 'bg-base-300 text-primary': currentListType !== 'none' }"
-          @mousedown.prevent
-          @click="listDropdownOpen = !listDropdownOpen"
-          title="List"
-        >
-          <component :is="listTypeIcons[currentListType]" :size="16" />
-          <ChevronDown :size="12" />
-        </button>
-
-        <!-- Dropdown menu -->
-        <div
-          v-if="listDropdownOpen"
-          class="absolute top-full left-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[160px]"
-          @mousedown.prevent
-        >
+        <!-- List Dropdown -->
+        <div v-else-if="item.type === 'dropdown' && item.dropdownType === 'list'" ref="listDropdownRef" class="relative">
           <button
-            v-for="type in ['bullet', 'ordered', 'task']"
-            :key="type"
             type="button"
-            class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
-            :class="{ 'bg-base-200 text-primary': currentListType === type }"
-            @click="toggleList(type as any)"
+            class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
+            :class="{ 'bg-base-300 text-primary': currentListType !== 'none' }"
+            @mousedown.prevent
+            @click="listDropdownOpen = !listDropdownOpen"
+            title="List"
           >
-            <component :is="listTypeIcons[type as keyof typeof listTypeIcons]" :size="16" />
-            <span>{{ listTypeLabels[type as keyof typeof listTypeLabels] }}</span>
+            <component :is="listTypeIcons[currentListType]" :size="16" />
+            <ChevronDown :size="12" />
           </button>
+
+          <!-- Dropdown menu -->
+          <div
+            v-if="listDropdownOpen"
+            class="absolute top-full left-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[160px]"
+            @mousedown.prevent
+          >
+            <button
+              v-for="type in ['bullet', 'ordered', 'task']"
+              :key="type"
+              type="button"
+              class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
+              :class="{ 'bg-base-200 text-primary': currentListType === type }"
+              @click="toggleList(type as any)"
+            >
+              <component :is="listTypeIcons[type as keyof typeof listTypeIcons]" :size="16" />
+              <span>{{ listTypeLabels[type as keyof typeof listTypeLabels] }}</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- Divider -->
-      <div class="w-px h-5 bg-base-300 mx-1"></div>
-
-      <!-- Bold Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isBoldActive }"
-        @mousedown.prevent
-        @click="toggleBold"
-        title="Bold (Ctrl+B)"
-      >
-        <Bold :size="16" />
-      </button>
-
-      <!-- Italic Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isItalicActive }"
-        @mousedown.prevent
-        @click="toggleItalic"
-        title="Italic (Ctrl+I)"
-      >
-        <Italic :size="16" />
-      </button>
-
-      <!-- Strikethrough Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isStrikethroughActive }"
-        @mousedown.prevent
-        @click="toggleStrikethrough"
-        title="Strikethrough"
-      >
-        <Strikethrough :size="16" />
-      </button>
-
-      <!-- Link Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isLinkActive }"
-        @mousedown.prevent
-        @click="toggleLink"
-        title="Link"
-      >
-        <Link :size="16" />
-      </button>
-
-      <!-- Custom Marks Buttons (auto-generated from config) -->
-      <button
-        v-for="config in customMarkConfigs"
-        :key="config.name"
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': customMarksActiveState.get(config.name)?.value }"
-        @mousedown.prevent
-        @click="toggleCustomMark(config.name)"
-        :title="config.title"
-      >
-        <component :is="config.icon" :size="16" />
-      </button>
-
-      <!-- Divider -->
-      <div class="w-px h-5 bg-base-300 mx-1"></div>
-
-      <!-- Code Block Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isCodeBlockActive }"
-        @mousedown.prevent
-        @click="toggleCodeBlock"
-        title="Code Block"
-      >
-        <Code :size="16" />
-      </button>
-
-      <!-- Blockquote Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isBlockquoteActive }"
-        @mousedown.prevent
-        @click="toggleBlockquote"
-        title="Quote"
-      >
-        <Quote :size="16" />
-      </button>
-
-      <!-- Horizontal Rule Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        @mousedown.prevent
-        @click="insertHorizontalRule"
-        title="Horizontal Line"
-      >
-        <Minus :size="16" />
-      </button>
+        <!-- Regular Button -->
+        <button
+          v-else-if="item.type === 'button'"
+          type="button"
+          class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
+          :class="{ 'bg-base-300 text-primary': getButtonActiveState(item) }"
+          @mousedown.prevent
+          @click="handleToolbarAction(item.action!)"
+          :title="item.title"
+        >
+          <component :is="item.icon" :size="16" />
+        </button>
+      </template>
     </div>
 
     <!-- Editor -->

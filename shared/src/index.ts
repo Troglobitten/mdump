@@ -67,6 +67,7 @@ export interface UserPreferences {
   debug: boolean;
   mdumpThemedEditor: boolean;
   editorFont: 'sans-serif' | 'serif' | 'monospace';
+  toolbarConfig: ToolbarConfig;
 }
 
 export interface AppSettings {
@@ -144,10 +145,42 @@ export interface KeyboardShortcut {
   description: string;
 }
 
+// Toolbar customization types
+// User preferences (stored in config)
+export interface ToolbarUserPreference {
+  id: string;
+  visible: boolean;
+  order: number;
+}
+
+export interface ToolbarConfig {
+  items: ToolbarUserPreference[];
+}
+
 // Constants
 export const ALLOWED_FILENAME_CHARS = /^[a-zA-Z0-9\-_. ]+$/;
 export const DISALLOWED_FILENAME_CHARS = /[/\\:*?"<>|]/;
 export const MAX_FILENAME_LENGTH = 200;
+
+export const DEFAULT_TOOLBAR_CONFIG: ToolbarConfig = {
+  items: [
+    { id: 'block-style-dropdown', visible: true, order: 0 },
+    { id: 'divider-1', visible: true, order: 1 },
+    { id: 'list-dropdown', visible: true, order: 2 },
+    { id: 'divider-2', visible: true, order: 3 },
+    { id: 'bold', visible: true, order: 4 },
+    { id: 'italic', visible: true, order: 5 },
+    { id: 'strikethrough', visible: true, order: 6 },
+    { id: 'link', visible: true, order: 7 },
+    { id: 'superscript', visible: true, order: 8 },
+    { id: 'subscript', visible: true, order: 9 },
+    { id: 'marker', visible: true, order: 10 },
+    { id: 'divider-3', visible: true, order: 11 },
+    { id: 'code-block', visible: true, order: 12 },
+    { id: 'blockquote', visible: true, order: 13 },
+    { id: 'horizontal-rule', visible: true, order: 14 },
+  ]
+};
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
@@ -169,4 +202,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   debug: false,
   mdumpThemedEditor: true,
   editorFont: 'sans-serif',
+  toolbarConfig: DEFAULT_TOOLBAR_CONFIG,
 };

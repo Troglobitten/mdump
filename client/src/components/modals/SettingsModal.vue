@@ -1,15 +1,44 @@
 <script setup lang="ts">
 import { ref, inject, watch } from 'vue';
-import { X } from 'lucide-vue-next';
+import { X, GripVertical, Eye, EyeOff, Plus } from 'lucide-vue-next';
+import draggable from 'vuedraggable';
 import { useSettings } from '@/composables/useSettings';
 import { useTheme } from '@/composables/useTheme';
 import { useAuth } from '@/composables/useAuth';
 import { settingsApi } from '@/api/client';
 import type { useToast } from '@/composables/useToast';
+import type { ToolbarUserPreference } from '@mdump/shared';
+import { DEFAULT_TOOLBAR_CONFIG } from '@mdump/shared';
+
+// Button definitions (must match EditorContainer.vue)
+interface ToolbarButtonDef {
+  id: string;
+  label: string;
+}
+
+const TOOLBAR_DEFINITIONS: ToolbarButtonDef[] = [
+  { id: 'block-style-dropdown', label: 'Block Style' },
+  { id: 'list-dropdown', label: 'List' },
+  { id: 'divider-1', label: '─────── (Divider)' },
+  { id: 'divider-2', label: '─────── (Divider)' },
+  { id: 'divider-3', label: '─────── (Divider)' },
+  { id: 'bold', label: 'Bold' },
+  { id: 'italic', label: 'Italic' },
+  { id: 'strikethrough', label: 'Strikethrough' },
+  { id: 'link', label: 'Link' },
+  { id: 'superscript', label: 'Superscript' },
+  { id: 'subscript', label: 'Subscript' },
+  { id: 'marker', label: 'Highlight' },
+  { id: 'code-block', label: 'Code Block' },
+  { id: 'blockquote', label: 'Quote' },
+  { id: 'horizontal-rule', label: 'Horizontal Line' },
+];
+
+const toolbarDefinitionsMap = new Map(TOOLBAR_DEFINITIONS.map(def => [def.id, def]));
 
 const open = defineModel<boolean>('open', { default: false });
 
-const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug, setMdumpThemedEditor, setEditorFont } = useSettings();
+const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug, setMdumpThemedEditor, setEditorFont, updateToolbarConfig } = useSettings();
 const { availableThemes, currentTheme } = useTheme();
 const { changePassword, version } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
@@ -26,6 +55,70 @@ const changingPassword = ref(false);
 const cacheSize = ref(0);
 const loadingCache = ref(false);
 const clearingCache = ref(false);
+
+// Toolbar customization
+const toolbarCustomizeOpen = ref(false);
+const toolbarItems = ref<ToolbarUserPreference[]>([]);
+const nextDividerId = ref(1);
+
+// Initialize toolbar items when opening customization modal
+function openToolbarCustomization() {
+  const config = preferences.value.toolbarConfig || DEFAULT_TOOLBAR_CONFIG;
+  toolbarItems.value = JSON.parse(JSON.stringify(config.items)); // Deep clone
+
+  // Calculate next divider ID
+  const dividerIds = toolbarItems.value
+    .filter(item => item.id.startsWith('divider-'))
+    .map(item => parseInt(item.id.split('-')[1]))
+    .filter(id => !isNaN(id));
+  nextDividerId.value = dividerIds.length > 0 ? Math.max(...dividerIds) + 1 : 1;
+
+  toolbarCustomizeOpen.value = true;
+}
+
+function closeToolbarCustomization() {
+  toolbarCustomizeOpen.value = false;
+}
+
+async function saveToolbarCustomization() {
+  // Update order based on array position
+  toolbarItems.value.forEach((item, index) => {
+    item.order = index;
+  });
+
+  await updateToolbarConfig({
+    items: toolbarItems.value,
+  });
+
+  toast.success('Toolbar customization saved');
+  toolbarCustomizeOpen.value = false;
+}
+
+function toggleToolbarItemVisibility(id: string) {
+  const item = toolbarItems.value.find(i => i.id === id);
+  if (item) {
+    item.visible = !item.visible;
+  }
+}
+
+function addDivider() {
+  const newDivider: ToolbarUserPreference = {
+    id: `divider-${nextDividerId.value}`,
+    visible: true,
+    order: toolbarItems.value.length,
+  };
+  toolbarItems.value.push(newDivider);
+  nextDividerId.value++;
+}
+
+async function resetToolbarToDefault() {
+  toolbarItems.value = JSON.parse(JSON.stringify(DEFAULT_TOOLBAR_CONFIG.items));
+}
+
+function getToolbarItemLabel(item: ToolbarUserPreference): string {
+  const def = toolbarDefinitionsMap.get(item.id);
+  return def?.label || item.id;
+}
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -170,10 +263,10 @@ function close() {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="modal-backdrop" @click.self="close">
-      <div class="modal-content">
+    <div v-if="open" class="modal modal-open" @click.self="close">
+      <div class="modal-box max-w-2xl">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-base-300">
+        <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold">Settings</h2>
           <button class="btn btn-ghost btn-sm btn-square" @click="close">
             <X class="w-4 h-4" />
@@ -181,7 +274,7 @@ function close() {
         </div>
 
         <!-- Tabs -->
-        <div class="tabs tabs-bordered px-4">
+        <div class="tabs tabs-bordered mb-4">
           <button
             class="tab"
             :class="{ 'tab-active': activeTab === 'appearance' }"
@@ -220,7 +313,7 @@ function close() {
         </div>
 
         <!-- Content -->
-        <div class="p-4 space-y-4">
+        <div class="space-y-4">
           <!-- Appearance -->
           <div v-if="activeTab === 'appearance'" class="space-y-4">
             <div class="form-control">
@@ -395,6 +488,15 @@ function close() {
                 />
               </label>
             </div>
+
+            <div class="divider"></div>
+
+            <div>
+              <h3 class="font-medium mb-2">Toolbar Customization</h3>
+              <button class="btn btn-outline btn-sm" @click="openToolbarCustomization">
+                Customize Toolbar...
+              </button>
+            </div>
           </div>
 
           <!-- Print -->
@@ -524,9 +626,83 @@ function close() {
         </div>
 
         <!-- Footer -->
-        <div class="flex items-center justify-between p-4 border-t border-base-300">
+        <div class="modal-action flex items-center justify-between">
           <span v-if="version" class="text-xs opacity-50">v{{ version }}</span>
           <button class="btn" @click="close">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar Customization Modal -->
+    <div v-if="toolbarCustomizeOpen" class="modal modal-open" @click.self="closeToolbarCustomization">
+      <div class="modal-box max-w-2xl">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Customize Toolbar</h2>
+          <button class="btn btn-ghost btn-sm btn-square" @click="closeToolbarCustomization">
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="space-y-4">
+          <!-- Draggable toolbar items -->
+          <div>
+            <h3 class="font-medium mb-3">Toolbar Items</h3>
+            <p class="text-sm text-base-content/60 mb-3">
+              Drag to reorder, click eye icon to show/hide
+            </p>
+
+            <draggable
+              v-model="toolbarItems"
+              item-key="id"
+              class="space-y-2"
+              handle=".drag-handle"
+              ghost-class="opacity-50"
+            >
+              <template #item="{ element: item }">
+                <div
+                  class="flex items-center gap-3 p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors"
+                  :class="{ 'opacity-50': !item.visible }"
+                >
+                  <!-- Drag handle -->
+                  <div class="drag-handle cursor-move text-base-content/40 hover:text-base-content">
+                    <GripVertical :size="20" />
+                  </div>
+
+                  <!-- Item label -->
+                  <span class="flex-1 text-sm font-medium">{{ getToolbarItemLabel(item) }}</span>
+
+                  <!-- Visibility toggle -->
+                  <button
+                    class="btn btn-ghost btn-sm btn-square"
+                    @click="toggleToolbarItemVisibility(item.id)"
+                    :title="item.visible ? 'Hide' : 'Show'"
+                  >
+                    <Eye v-if="item.visible" :size="16" />
+                    <EyeOff v-else :size="16" />
+                  </button>
+                </div>
+              </template>
+            </draggable>
+
+            <!-- Add divider button -->
+            <button class="btn btn-outline btn-sm mt-3" @click="addDivider">
+              <Plus :size="16" />
+              Add Divider
+            </button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-action flex items-center justify-between">
+          <button class="btn btn-ghost btn-sm" @click="resetToolbarToDefault">
+            Reset to Default
+          </button>
+          <div class="flex gap-2">
+            <button class="btn btn-ghost" @click="closeToolbarCustomization">Cancel</button>
+            <button class="btn btn-primary" @click="saveToolbarCustomization">Save</button>
+          </div>
         </div>
       </div>
     </div>
