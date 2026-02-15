@@ -7,9 +7,9 @@ import { toggleStrikethroughCommand } from '@milkdown/preset-gfm';
 import { $command, $mark, $remark } from '@milkdown/utils';
 import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
-import type { Editor } from '@milkdown/kit/core';
+import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter } from 'lucide-vue-next';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
@@ -20,9 +20,10 @@ import Breadcrumb from './Breadcrumb.vue';
 import AttachmentBar from './AttachmentBar.vue';
 import PasteMarkdownModal from '@/components/modals/PasteMarkdownModal.vue';
 
-// Remark plugin to transform <sup> and <sub> HTML into mark nodes
-const remarkSuperSubPlugin = $remark('remarkSuperSub', () => () => (tree: any) => {
+// Remark plugin to transform <sup>, <sub>, and ==marker== syntax into mark nodes
+const remarkCustomMarksPlugin = $remark('remarkCustomMarks', () => () => (tree: any) => {
   visit(tree, (node, index, parent) => {
+    // Handle HTML tags for superscript and subscript
     if (node.type === 'html' && (node.value === '<sup>' || node.value === '<sub>')) {
       const markType = node.value === '<sup>' ? 'superscript' : 'subscript';
       const closingTag = node.value === '<sup>' ? '</sup>' : '</sub>';
@@ -54,6 +55,47 @@ const remarkSuperSubPlugin = $remark('remarkSuperSub', () => () => (tree: any) =
 
         // Return index to re-visit this position
         return startIndex;
+      }
+    }
+
+    // Handle ==marker== syntax
+    if (node.type === 'text' && node.value && node.value.includes('==')) {
+      const markerRegex = /==([^=]+)==/g;
+      const parts: any[] = [];
+      let lastIndex = 0;
+      let match;
+
+      while ((match = markerRegex.exec(node.value)) !== null) {
+        // Add text before the marker
+        if (match.index > lastIndex) {
+          parts.push({
+            type: 'text',
+            value: node.value.substring(lastIndex, match.index)
+          });
+        }
+
+        // Add the marker node
+        parts.push({
+          type: 'marker',
+          children: [{ type: 'text', value: match[1] }]
+        });
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      // Add remaining text
+      if (lastIndex < node.value.length) {
+        parts.push({
+          type: 'text',
+          value: node.value.substring(lastIndex)
+        });
+      }
+
+      // Replace the text node with the parts if we found markers
+      if (parts.length > 0 && parent && index !== undefined) {
+        parent.children.splice(index, 1, ...parts);
+        // Skip past all the nodes we just inserted to avoid revisiting them
+        return index + parts.length;
       }
     }
   });
@@ -99,6 +141,29 @@ const subscriptMark = $mark('subscript', () => ({
   },
 }));
 
+// Define marker/highlight mark
+const markerMark = $mark('marker', () => ({
+  parseDOM: [
+    { tag: 'mark' },
+    { style: 'background-color', getAttrs: (value) => value !== '' && null }
+  ],
+  toDOM: () => ['mark', 0],
+  parseMarkdown: {
+    match: (node) => node.type === 'marker',
+    runner: (state, node, type) => {
+      state.openMark(type);
+      state.next(node.children);
+      state.closeMark(type);
+    },
+  },
+  toMarkdown: {
+    match: (mark) => mark.type.name === 'marker',
+    runner: (state, mark) => {
+      state.withMark(mark, 'marker');
+    },
+  },
+}));
+
 // Define toggle commands
 const toggleSuperscriptCommand = $command('ToggleSuperscript', (ctx) => () => {
   return toggleMark(superscriptMark.type(ctx));
@@ -108,19 +173,26 @@ const toggleSubscriptCommand = $command('ToggleSubscript', (ctx) => () => {
   return toggleMark(subscriptMark.type(ctx));
 });
 
-// Custom feature to add superscript and subscript support
-const superSubFeature = (editor: Editor) => {
-  // Add remark plugin to parse HTML tags into mark nodes
-  editor.use(remarkSuperSubPlugin);
+const toggleMarkerCommand = $command('ToggleMarker', (ctx) => () => {
+  return toggleMark(markerMark.type(ctx));
+});
+
+// Custom feature to add superscript, subscript, and marker support
+const customMarksFeature = (editor: Editor) => {
+  // Add remark plugin to parse custom syntax into mark nodes
+  editor.use(remarkCustomMarksPlugin);
 
   // Add marks and commands
   editor.use(superscriptMark);
   editor.use(subscriptMark);
+  editor.use(markerMark);
   editor.use(toggleSuperscriptCommand);
   editor.use(toggleSubscriptCommand);
+  editor.use(toggleMarkerCommand);
 
-  // Add custom remark stringify handlers for HTML serialization
-  editor.config((ctx) => {
+  // Add custom remark stringify handlers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  editor.config((ctx: any) => {
     const options = ctx.get(remarkStringifyOptionsCtx);
 
     // Handler for superscript - wraps content in <sup> tags
@@ -153,6 +225,23 @@ const superSubFeature = (editor: Editor) => {
         })
       );
       value += tracker.move('</sub>');
+      exit();
+      return value;
+    };
+
+    // Handler for marker - wraps content in == ==
+    options.handlers.marker = (node: any, _: any, state: any, info: any) => {
+      const exit = state.enter('marker');
+      const tracker = state.createTracker(info);
+      let value = tracker.move('==');
+      value += tracker.move(
+        state.containerPhrasing(node, {
+          before: value,
+          after: '==',
+          ...tracker.current()
+        })
+      );
+      value += tracker.move('==');
       exit();
       return value;
     };
@@ -197,6 +286,7 @@ const isItalicActive = ref(false);
 const isStrikethroughActive = ref(false);
 const isSuperscriptActive = ref(false);
 const isSubscriptActive = ref(false);
+const isMarkerActive = ref(false);
 const isCodeBlockActive = ref(false);
 const isBlockquoteActive = ref(false);
 const currentBlockType = ref<'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'>('paragraph');
@@ -261,8 +351,8 @@ async function createEditor() {
       },
     });
 
-    // Add custom superscript/subscript feature before creating
-    crepe.addFeature(superSubFeature);
+    // Add custom marks feature before creating
+    crepe.addFeature(customMarksFeature);
 
     debug.time('Crepe initialization');
     await crepe.create();
@@ -329,6 +419,7 @@ function updateToolbarStateFromView(view: any) {
     const strikeMark = state.schema.marks.strike_through;
     const superscriptMarkType = state.schema.marks.superscript;
     const subscriptMarkType = state.schema.marks.subscript;
+    const markerMarkType = state.schema.marks.marker;
 
     // Helper to check if a mark is active
     const isMarkActive = (mark: any) => {
@@ -347,6 +438,7 @@ function updateToolbarStateFromView(view: any) {
     isStrikethroughActive.value = isMarkActive(strikeMark);
     isSuperscriptActive.value = isMarkActive(superscriptMarkType);
     isSubscriptActive.value = isMarkActive(subscriptMarkType);
+    isMarkerActive.value = isMarkActive(markerMarkType);
 
     // Check block type (paragraph vs headings vs others)
     const $from = state.selection.$from;
@@ -438,6 +530,14 @@ function toggleSubscript() {
   crepe.editor?.action((ctx) => {
     const commandManager = ctx.get(commandsCtx);
     commandManager.call(toggleSubscriptCommand.key);
+  });
+}
+
+function toggleMarker() {
+  if (!crepe) return;
+  crepe.editor?.action((ctx) => {
+    const commandManager = ctx.get(commandsCtx);
+    commandManager.call(toggleMarkerCommand.key);
   });
 }
 
@@ -871,6 +971,18 @@ watch(externalReloadPath, (path) => {
         title="Subscript"
       >
         <Subscript :size="16" />
+      </button>
+
+      <!-- Marker/Highlight Button -->
+      <button
+        type="button"
+        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
+        :class="{ 'bg-base-300 text-primary': isMarkerActive }"
+        @mousedown.prevent
+        @click="toggleMarker"
+        title="Highlight"
+      >
+        <Highlighter :size="16" />
       </button>
 
       <!-- Divider -->
