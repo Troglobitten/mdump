@@ -2,14 +2,14 @@
 import { ref, onMounted, onUnmounted, watch, inject, computed, nextTick, type Ref } from 'vue';
 import { Crepe, CrepeFeature } from '@milkdown/crepe';
 import { commandsCtx, editorViewCtx, remarkStringifyOptionsCtx } from '@milkdown/core';
-import { toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand, turnIntoTextCommand, wrapInBulletListCommand, wrapInOrderedListCommand, liftListItemCommand, wrapInBlockquoteCommand, createCodeBlockCommand, insertHrCommand } from '@milkdown/preset-commonmark';
+import { toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand, turnIntoTextCommand, wrapInBulletListCommand, wrapInOrderedListCommand, liftListItemCommand, wrapInBlockquoteCommand, createCodeBlockCommand, insertHrCommand, toggleLinkCommand } from '@milkdown/preset-commonmark';
 import { toggleStrikethroughCommand } from '@milkdown/preset-gfm';
 import { $command, $mark, $remark } from '@milkdown/utils';
 import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link } from 'lucide-vue-next';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
@@ -20,231 +20,249 @@ import Breadcrumb from './Breadcrumb.vue';
 import AttachmentBar from './AttachmentBar.vue';
 import PasteMarkdownModal from '@/components/modals/PasteMarkdownModal.vue';
 
-// Remark plugin to transform <sup>, <sub>, and ==marker== syntax into mark nodes
-const remarkCustomMarksPlugin = $remark('remarkCustomMarks', () => () => (tree: any) => {
-  visit(tree, (node, index, parent) => {
-    // Handle HTML tags for superscript and subscript
-    if (node.type === 'html' && (node.value === '<sup>' || node.value === '<sub>')) {
-      const markType = node.value === '<sup>' ? 'superscript' : 'subscript';
-      const closingTag = node.value === '<sup>' ? '</sup>' : '</sub>';
+// ========================================
+// CUSTOM MARKS CONFIGURATION SYSTEM
+// ========================================
 
-      // Find the closing tag
-      const siblings = parent?.children || [];
-      const startIndex = index!;
-      let endIndex = -1;
+/**
+ * Configuration interface for custom markdown marks
+ */
+interface CustomMarkConfig {
+  name: string;           // Mark name (e.g., 'superscript', 'marker')
+  htmlTag: string;        // HTML tag to use (e.g., 'sup', 'mark')
+  syntax: 'html' | 'delimiter';  // Markdown syntax type
+  delimiter?: string;     // For delimiter syntax (e.g., '==')
+  parseDOM?: any[];      // Optional custom parseDOM rules (defaults to [{ tag: htmlTag }])
+  icon: any;             // Lucide icon component
+  title: string;         // Button tooltip
+}
 
-      for (let i = startIndex + 1; i < siblings.length; i++) {
-        if (siblings[i].type === 'html' && siblings[i].value === closingTag) {
-          endIndex = i;
-          break;
-        }
-      }
+/**
+ * Custom marks configuration - add new marks here!
+ *
+ * To add a new custom mark:
+ * 1. Add a config object to this array
+ * 2. Import the icon from 'lucide-vue-next' at the top
+ * 3. That's it! The mark, command, parser, handler, and UI button will be auto-generated
+ */
+const customMarkConfigs: CustomMarkConfig[] = [
+  {
+    name: 'superscript',
+    htmlTag: 'sup',
+    syntax: 'html',
+    icon: Superscript,
+    title: 'Superscript'
+  },
+  {
+    name: 'subscript',
+    htmlTag: 'sub',
+    syntax: 'html',
+    icon: Subscript,
+    title: 'Subscript'
+  },
+  {
+    name: 'marker',
+    htmlTag: 'mark',
+    syntax: 'delimiter',
+    delimiter: '==',
+    icon: Highlighter,
+    title: 'Highlight',
+    parseDOM: [
+      { tag: 'mark' },
+      { style: 'background-color', getAttrs: (value: any) => value !== '' && null }
+    ]
+  }
+];
 
-      if (endIndex !== -1 && parent) {
-        // Collect children between opening and closing tags
-        const children = siblings.slice(startIndex + 1, endIndex);
+/**
+ * Factory: Creates a Milkdown mark from config
+ */
+const createMarkFromConfig = (config: CustomMarkConfig) => {
+  return $mark(config.name, () => ({
+    parseDOM: config.parseDOM || [{ tag: config.htmlTag }],
+    toDOM: () => [config.htmlTag, 0],
+    parseMarkdown: {
+      match: (node: any) => node.type === config.name,
+      runner: (state: any, node: any, type: any) => {
+        state.openMark(type);
+        state.next(node.children);
+        state.closeMark(type);
+      },
+    },
+    toMarkdown: {
+      match: (mark: any) => mark.type.name === config.name,
+      runner: (state: any, mark: any) => {
+        state.withMark(mark, config.name);
+      },
+    },
+  }));
+};
 
-        // Create a new mark node
-        const markNode = {
-          type: markType,
-          children: children
-        };
-
-        // Replace the HTML nodes with the mark node
-        parent.children.splice(startIndex, endIndex - startIndex + 1, markNode);
-
-        // Return index to re-visit this position
-        return startIndex;
-      }
-    }
-
-    // Handle ==marker== syntax
-    if (node.type === 'text' && node.value && node.value.includes('==')) {
-      const markerRegex = /==([^=]+)==/g;
-      const parts: any[] = [];
-      let lastIndex = 0;
-      let match;
-
-      while ((match = markerRegex.exec(node.value)) !== null) {
-        // Add text before the marker
-        if (match.index > lastIndex) {
-          parts.push({
-            type: 'text',
-            value: node.value.substring(lastIndex, match.index)
-          });
-        }
-
-        // Add the marker node
-        parts.push({
-          type: 'marker',
-          children: [{ type: 'text', value: match[1] }]
-        });
-
-        lastIndex = match.index + match[0].length;
-      }
-
-      // Add remaining text
-      if (lastIndex < node.value.length) {
-        parts.push({
-          type: 'text',
-          value: node.value.substring(lastIndex)
-        });
-      }
-
-      // Replace the text node with the parts if we found markers
-      if (parts.length > 0 && parent && index !== undefined) {
-        parent.children.splice(index, 1, ...parts);
-        // Skip past all the nodes we just inserted to avoid revisiting them
-        return index + parts.length;
-      }
-    }
+/**
+ * Factory: Creates a toggle command from mark
+ */
+const createToggleCommand = (config: CustomMarkConfig, mark: any) => {
+  const commandName = `Toggle${config.name.charAt(0).toUpperCase() + config.name.slice(1)}`;
+  return $command(commandName, (ctx: any) => () => {
+    return toggleMark(mark.type(ctx));
   });
+};
+
+/**
+ * Factory: Creates remark stringify handler from config
+ */
+const createStringifyHandler = (config: CustomMarkConfig) => {
+  return (node: any, _: any, state: any, info: any) => {
+    const exit = state.enter(config.name);
+    const tracker = state.createTracker(info);
+
+    // Determine opening/closing syntax
+    const opening = config.syntax === 'delimiter'
+      ? config.delimiter!
+      : `<${config.htmlTag}>`;
+    const closing = config.syntax === 'delimiter'
+      ? config.delimiter!
+      : `</${config.htmlTag}>`;
+
+    let value = tracker.move(opening);
+    value += tracker.move(
+      state.containerPhrasing(node, {
+        before: value,
+        after: closing,
+        ...tracker.current()
+      })
+    );
+    value += tracker.move(closing);
+    exit();
+    return value;
+  };
+};
+
+/**
+ * Remark plugin to parse custom markdown syntax into mark nodes
+ */
+const createCustomMarksRemarkPlugin = (configs: CustomMarkConfig[]) => {
+  return $remark('remarkCustomMarks', () => () => (tree: any) => {
+    visit(tree, (node, index, parent) => {
+      // Handle HTML tag syntax
+      const htmlConfigs = configs.filter(c => c.syntax === 'html');
+      for (const config of htmlConfigs) {
+        const openTag = `<${config.htmlTag}>`;
+        const closeTag = `</${config.htmlTag}>`;
+
+        if (node.type === 'html' && node.value === openTag) {
+          const siblings = parent?.children || [];
+          const startIndex = index!;
+          let endIndex = -1;
+
+          // Find closing tag
+          for (let i = startIndex + 1; i < siblings.length; i++) {
+            if (siblings[i].type === 'html' && siblings[i].value === closeTag) {
+              endIndex = i;
+              break;
+            }
+          }
+
+          if (endIndex !== -1 && parent) {
+            // Collect children between tags
+            const children = siblings.slice(startIndex + 1, endIndex);
+
+            // Create mark node
+            const markNode = {
+              type: config.name,
+              children: children
+            };
+
+            // Replace HTML nodes with mark node
+            parent.children.splice(startIndex, endIndex - startIndex + 1, markNode);
+            return startIndex;
+          }
+        }
+      }
+
+      // Handle delimiter syntax
+      const delimiterConfigs = configs.filter(c => c.syntax === 'delimiter');
+      for (const config of delimiterConfigs) {
+        const delimiter = config.delimiter!;
+        if (node.type === 'text' && node.value && node.value.includes(delimiter)) {
+          const escapedDelimiter = delimiter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`${escapedDelimiter}([^${escapedDelimiter}]+)${escapedDelimiter}`, 'g');
+          const parts: any[] = [];
+          let lastIndex = 0;
+          let match;
+
+          while ((match = regex.exec(node.value)) !== null) {
+            // Add text before the delimiter
+            if (match.index > lastIndex) {
+              parts.push({
+                type: 'text',
+                value: node.value.substring(lastIndex, match.index)
+              });
+            }
+
+            // Add the mark node
+            parts.push({
+              type: config.name,
+              children: [{ type: 'text', value: match[1] }]
+            });
+
+            lastIndex = match.index + match[0].length;
+          }
+
+          // Add remaining text
+          if (lastIndex < node.value.length) {
+            parts.push({
+              type: 'text',
+              value: node.value.substring(lastIndex)
+            });
+          }
+
+          // Replace the text node with parts if we found delimiters
+          if (parts.length > 0 && parent && index !== undefined) {
+            parent.children.splice(index, 1, ...parts);
+            // Skip past inserted nodes to avoid revisiting
+            return index + parts.length;
+          }
+        }
+      }
+    });
+  });
+};
+
+/**
+ * Generate marks, commands, and plugin from configurations
+ */
+const customMarksMap = new Map();
+const customCommandsMap = new Map();
+
+customMarkConfigs.forEach(config => {
+  const mark = createMarkFromConfig(config);
+  const command = createToggleCommand(config, mark);
+  customMarksMap.set(config.name, mark);
+  customCommandsMap.set(config.name, command);
 });
 
-// Define superscript mark
-const superscriptMark = $mark('superscript', () => ({
-  parseDOM: [{ tag: 'sup' }],
-  toDOM: () => ['sup', 0],
-  parseMarkdown: {
-    match: (node) => node.type === 'superscript',
-    runner: (state, node, type) => {
-      state.openMark(type);
-      state.next(node.children);
-      state.closeMark(type);
-    },
-  },
-  toMarkdown: {
-    match: (mark) => mark.type.name === 'superscript',
-    runner: (state, mark) => {
-      state.withMark(mark, 'superscript');
-    },
-  },
-}));
+const remarkCustomMarksPlugin = createCustomMarksRemarkPlugin(customMarkConfigs);
 
-// Define subscript mark
-const subscriptMark = $mark('subscript', () => ({
-  parseDOM: [{ tag: 'sub' }],
-  toDOM: () => ['sub', 0],
-  parseMarkdown: {
-    match: (node) => node.type === 'subscript',
-    runner: (state, node, type) => {
-      state.openMark(type);
-      state.next(node.children);
-      state.closeMark(type);
-    },
-  },
-  toMarkdown: {
-    match: (mark) => mark.type.name === 'subscript',
-    runner: (state, mark) => {
-      state.withMark(mark, 'subscript');
-    },
-  },
-}));
-
-// Define marker/highlight mark
-const markerMark = $mark('marker', () => ({
-  parseDOM: [
-    { tag: 'mark' },
-    { style: 'background-color', getAttrs: (value) => value !== '' && null }
-  ],
-  toDOM: () => ['mark', 0],
-  parseMarkdown: {
-    match: (node) => node.type === 'marker',
-    runner: (state, node, type) => {
-      state.openMark(type);
-      state.next(node.children);
-      state.closeMark(type);
-    },
-  },
-  toMarkdown: {
-    match: (mark) => mark.type.name === 'marker',
-    runner: (state, mark) => {
-      state.withMark(mark, 'marker');
-    },
-  },
-}));
-
-// Define toggle commands
-const toggleSuperscriptCommand = $command('ToggleSuperscript', (ctx) => () => {
-  return toggleMark(superscriptMark.type(ctx));
-});
-
-const toggleSubscriptCommand = $command('ToggleSubscript', (ctx) => () => {
-  return toggleMark(subscriptMark.type(ctx));
-});
-
-const toggleMarkerCommand = $command('ToggleMarker', (ctx) => () => {
-  return toggleMark(markerMark.type(ctx));
-});
-
-// Custom feature to add superscript, subscript, and marker support
+/**
+ * Custom marks feature - adds all configured marks to the editor
+ */
 const customMarksFeature = (editor: Editor) => {
-  // Add remark plugin to parse custom syntax into mark nodes
+  // Add remark plugin
   editor.use(remarkCustomMarksPlugin);
 
-  // Add marks and commands
-  editor.use(superscriptMark);
-  editor.use(subscriptMark);
-  editor.use(markerMark);
-  editor.use(toggleSuperscriptCommand);
-  editor.use(toggleSubscriptCommand);
-  editor.use(toggleMarkerCommand);
+  // Add all marks and commands
+  customMarksMap.forEach(mark => editor.use(mark));
+  customCommandsMap.forEach(command => editor.use(command));
 
-  // Add custom remark stringify handlers
+  // Add stringify handlers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   editor.config((ctx: any) => {
     const options = ctx.get(remarkStringifyOptionsCtx);
 
-    // Handler for superscript - wraps content in <sup> tags
-    options.handlers.superscript = (node: any, _: any, state: any, info: any) => {
-      const exit = state.enter('superscript');
-      const tracker = state.createTracker(info);
-      let value = tracker.move('<sup>');
-      value += tracker.move(
-        state.containerPhrasing(node, {
-          before: value,
-          after: '</sup>',
-          ...tracker.current()
-        })
-      );
-      value += tracker.move('</sup>');
-      exit();
-      return value;
-    };
-
-    // Handler for subscript - wraps content in <sub> tags
-    options.handlers.subscript = (node: any, _: any, state: any, info: any) => {
-      const exit = state.enter('subscript');
-      const tracker = state.createTracker(info);
-      let value = tracker.move('<sub>');
-      value += tracker.move(
-        state.containerPhrasing(node, {
-          before: value,
-          after: '</sub>',
-          ...tracker.current()
-        })
-      );
-      value += tracker.move('</sub>');
-      exit();
-      return value;
-    };
-
-    // Handler for marker - wraps content in == ==
-    options.handlers.marker = (node: any, _: any, state: any, info: any) => {
-      const exit = state.enter('marker');
-      const tracker = state.createTracker(info);
-      let value = tracker.move('==');
-      value += tracker.move(
-        state.containerPhrasing(node, {
-          before: value,
-          after: '==',
-          ...tracker.current()
-        })
-      );
-      value += tracker.move('==');
-      exit();
-      return value;
-    };
+    customMarkConfigs.forEach(config => {
+      options.handlers[config.name] = createStringifyHandler(config);
+    });
 
     ctx.set(remarkStringifyOptionsCtx, options);
   });
@@ -271,6 +289,9 @@ const attachmentBarRef = ref<InstanceType<typeof AttachmentBar> | null>(null);
 const imageInputRef = ref<HTMLInputElement | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const pasteModalOpen = ref(false);
+const linkModalOpen = ref(false);
+const linkUrl = ref('');
+const linkTitle = ref('');
 const blockStyleDropdownRef = ref<HTMLDivElement | null>(null);
 const listDropdownRef = ref<HTMLDivElement | null>(null);
 
@@ -284,15 +305,19 @@ let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
 const isBoldActive = ref(false);
 const isItalicActive = ref(false);
 const isStrikethroughActive = ref(false);
-const isSuperscriptActive = ref(false);
-const isSubscriptActive = ref(false);
-const isMarkerActive = ref(false);
+const isLinkActive = ref(false);
 const isCodeBlockActive = ref(false);
 const isBlockquoteActive = ref(false);
 const currentBlockType = ref<'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'>('paragraph');
 const blockStyleDropdownOpen = ref(false);
 const currentListType = ref<'none' | 'bullet' | 'ordered' | 'task'>('none');
 const listDropdownOpen = ref(false);
+
+// Custom marks active state (generated from config)
+const customMarksActiveState = new Map<string, Ref<boolean>>();
+customMarkConfigs.forEach(config => {
+  customMarksActiveState.set(config.name, ref(false));
+});
 
 const isDirty = computed(() => content.value !== lastSavedContent.value);
 
@@ -348,6 +373,36 @@ async function createEditor() {
       defaultValue: content.value || '# Welcome\n\nStart writing...',
       features: {
         [CrepeFeature.Latex]: false,
+      },
+      featureConfigs: {
+        [CrepeFeature.Toolbar]: {
+          buildToolbar: (builder: any) => {
+            // Add a new group for custom marks
+            const customGroup = builder.addGroup('custom', 'Custom');
+            customGroup.addItem('marker', {
+              icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>`,
+              active: (ctx: any) => {
+                const view = ctx.get(editorViewCtx);
+                const { state } = view;
+                const { from, to, empty } = state.selection;
+                const markerMark = state.schema.marks.marker;
+                if (!markerMark) return false;
+                if (empty) {
+                  const marks = state.storedMarks || state.selection.$from.marks();
+                  return markerMark.isInSet(marks) !== undefined;
+                }
+                return state.doc.rangeHasMark(from, to, markerMark);
+              },
+              onRun: (ctx: any) => {
+                const commandManager = ctx.get(commandsCtx);
+                const markerCommand = customCommandsMap.get('marker');
+                if (markerCommand) {
+                  commandManager.call(markerCommand.key);
+                }
+              }
+            });
+          }
+        }
       },
     });
 
@@ -417,9 +472,7 @@ function updateToolbarStateFromView(view: any) {
     const strongMark = state.schema.marks.strong;
     const emMark = state.schema.marks.em || state.schema.marks.emphasis;
     const strikeMark = state.schema.marks.strike_through;
-    const superscriptMarkType = state.schema.marks.superscript;
-    const subscriptMarkType = state.schema.marks.subscript;
-    const markerMarkType = state.schema.marks.marker;
+    const linkMark = state.schema.marks.link;
 
     // Helper to check if a mark is active
     const isMarkActive = (mark: any) => {
@@ -432,13 +485,20 @@ function updateToolbarStateFromView(view: any) {
       }
     };
 
-    // Check marks
+    // Check built-in marks
     isBoldActive.value = isMarkActive(strongMark);
     isItalicActive.value = isMarkActive(emMark);
     isStrikethroughActive.value = isMarkActive(strikeMark);
-    isSuperscriptActive.value = isMarkActive(superscriptMarkType);
-    isSubscriptActive.value = isMarkActive(subscriptMarkType);
-    isMarkerActive.value = isMarkActive(markerMarkType);
+    isLinkActive.value = isMarkActive(linkMark);
+
+    // Check custom marks (dynamically generated from config)
+    customMarkConfigs.forEach(config => {
+      const markType = state.schema.marks[config.name];
+      const activeRef = customMarksActiveState.get(config.name);
+      if (activeRef) {
+        activeRef.value = isMarkActive(markType);
+      }
+    });
 
     // Check block type (paragraph vs headings vs others)
     const $from = state.selection.$from;
@@ -517,27 +577,64 @@ function toggleStrikethrough() {
   });
 }
 
-function toggleSuperscript() {
+function toggleLink() {
   if (!crepe) return;
+
   crepe.editor?.action((ctx) => {
-    const commandManager = ctx.get(commandsCtx);
-    commandManager.call(toggleSuperscriptCommand.key);
+    const view = ctx.get(editorViewCtx);
+    const { state } = view;
+    const { from, to } = state.selection;
+    const linkMark = state.schema.marks.link;
+
+    // Check if there's already a link
+    const hasLink = state.doc.rangeHasMark(from, to, linkMark);
+
+    if (hasLink) {
+      // Remove link
+      const commandManager = ctx.get(commandsCtx);
+      commandManager.call(toggleLinkCommand.key, { href: '' });
+    } else {
+      // Show modal for URL input
+      linkUrl.value = '';
+      linkTitle.value = '';
+      linkModalOpen.value = true;
+    }
   });
 }
 
-function toggleSubscript() {
-  if (!crepe) return;
+function confirmLink() {
+  if (!crepe || !linkUrl.value) return;
+
   crepe.editor?.action((ctx) => {
     const commandManager = ctx.get(commandsCtx);
-    commandManager.call(toggleSubscriptCommand.key);
+    commandManager.call(toggleLinkCommand.key, {
+      href: linkUrl.value,
+      title: linkTitle.value || undefined
+    });
   });
+
+  linkModalOpen.value = false;
+  linkUrl.value = '';
+  linkTitle.value = '';
 }
 
-function toggleMarker() {
+function cancelLink() {
+  linkModalOpen.value = false;
+  linkUrl.value = '';
+  linkTitle.value = '';
+}
+
+// Generic toggle function for custom marks
+function toggleCustomMark(markName: string) {
   if (!crepe) return;
+  const command = customCommandsMap.get(markName);
+  if (!command) {
+    console.error(`No command found for mark: ${markName}`);
+    return;
+  }
   crepe.editor?.action((ctx) => {
     const commandManager = ctx.get(commandsCtx);
-    commandManager.call(toggleMarkerCommand.key);
+    commandManager.call(command.key);
   });
 }
 
@@ -949,40 +1046,30 @@ watch(externalReloadPath, (path) => {
         <Strikethrough :size="16" />
       </button>
 
-      <!-- Superscript Button -->
+      <!-- Link Button -->
       <button
         type="button"
         class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isSuperscriptActive }"
+        :class="{ 'bg-base-300 text-primary': isLinkActive }"
         @mousedown.prevent
-        @click="toggleSuperscript"
-        title="Superscript"
+        @click="toggleLink"
+        title="Link"
       >
-        <Superscript :size="16" />
+        <Link :size="16" />
       </button>
 
-      <!-- Subscript Button -->
+      <!-- Custom Marks Buttons (auto-generated from config) -->
       <button
+        v-for="config in customMarkConfigs"
+        :key="config.name"
         type="button"
         class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isSubscriptActive }"
+        :class="{ 'bg-base-300 text-primary': customMarksActiveState.get(config.name)?.value }"
         @mousedown.prevent
-        @click="toggleSubscript"
-        title="Subscript"
+        @click="toggleCustomMark(config.name)"
+        :title="config.title"
       >
-        <Subscript :size="16" />
-      </button>
-
-      <!-- Marker/Highlight Button -->
-      <button
-        type="button"
-        class="flex items-center justify-center w-8 h-8 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 p-0 hover:bg-primary/20"
-        :class="{ 'bg-base-300 text-primary': isMarkerActive }"
-        @mousedown.prevent
-        @click="toggleMarker"
-        title="Highlight"
-      >
-        <Highlighter :size="16" />
+        <component :is="config.icon" :size="16" />
       </button>
 
       <!-- Divider -->
@@ -1033,5 +1120,46 @@ watch(externalReloadPath, (path) => {
 
     <!-- Paste as markdown modal (not yet hooked up) -->
     <PasteMarkdownModal v-model:open="pasteModalOpen" @submit="handlePasteMarkdown" />
+
+    <!-- Link modal -->
+    <div v-if="linkModalOpen" class="modal modal-open" @click.self="cancelLink">
+      <div class="modal-box relative z-50">
+        <h3 class="font-bold text-lg mb-4">Insert Link</h3>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">URL</span>
+          </label>
+          <input
+            v-model="linkUrl"
+            type="text"
+            placeholder="https://example.com"
+            class="input input-bordered w-full"
+            @keyup.enter="confirmLink"
+            @keyup.esc="cancelLink"
+            autofocus
+          />
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">Title (optional)</span>
+          </label>
+          <input
+            v-model="linkTitle"
+            type="text"
+            placeholder="Link title"
+            class="input input-bordered w-full"
+            @keyup.enter="confirmLink"
+            @keyup.esc="cancelLink"
+          />
+        </div>
+
+        <div class="modal-action">
+          <button class="btn btn-ghost" @click="cancelLink">Cancel</button>
+          <button class="btn btn-primary" @click="confirmLink" :disabled="!linkUrl">Insert</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
