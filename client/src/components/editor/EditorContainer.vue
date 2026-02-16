@@ -2,23 +2,23 @@
 import { ref, onMounted, onUnmounted, watch, inject, computed, nextTick, type Ref } from 'vue';
 import { Crepe, CrepeFeature } from '@milkdown/crepe';
 import { commandsCtx, editorViewCtx, remarkStringifyOptionsCtx } from '@milkdown/core';
-import { toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand, turnIntoTextCommand, wrapInBulletListCommand, wrapInOrderedListCommand, liftListItemCommand, wrapInBlockquoteCommand, createCodeBlockCommand, insertHrCommand, toggleLinkCommand } from '@milkdown/preset-commonmark';
+import { toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand, turnIntoTextCommand, wrapInBulletListCommand, wrapInOrderedListCommand, liftListItemCommand, wrapInBlockquoteCommand, createCodeBlockCommand, insertHrCommand, toggleLinkCommand, clearTextInCurrentBlockCommand, addBlockTypeCommand } from '@milkdown/preset-commonmark';
 import { toggleStrikethroughCommand } from '@milkdown/preset-gfm';
 import { $command, $mark, $remark } from '@milkdown/utils';
 import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image } from 'lucide-vue-next';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
 import { useKeyboard } from '@/composables/useKeyboard';
 import { useDebug } from '@/composables/useDebug';
 import type { useToast } from '@/composables/useToast';
+import { uploadApi } from '@/api/client';
 import Breadcrumb from './Breadcrumb.vue';
 import AttachmentBar from './AttachmentBar.vue';
-import PasteMarkdownModal from '@/components/modals/PasteMarkdownModal.vue';
 
 // ========================================
 // CUSTOM MARKS CONFIGURATION SYSTEM
@@ -286,9 +286,6 @@ const content = ref('');
 const lastSavedContent = ref('');
 const editorEl = ref<HTMLDivElement | null>(null);
 const attachmentBarRef = ref<InstanceType<typeof AttachmentBar> | null>(null);
-const imageInputRef = ref<HTMLInputElement | null>(null);
-const fileInputRef = ref<HTMLInputElement | null>(null);
-const pasteModalOpen = ref(false);
 const linkModalOpen = ref(false);
 const linkUrl = ref('');
 const linkTitle = ref('');
@@ -343,6 +340,7 @@ const TOOLBAR_BUTTON_DEFINITIONS: ToolbarButtonDefinition[] = [
   { id: 'superscript', type: 'button', buttonType: 'custom', action: 'superscript', icon: Superscript, title: 'Superscript' },
   { id: 'subscript', type: 'button', buttonType: 'custom', action: 'subscript', icon: Subscript, title: 'Subscript' },
   { id: 'marker', type: 'button', buttonType: 'custom', action: 'marker', icon: Highlighter, title: 'Highlight' },
+  { id: 'image', type: 'button', buttonType: 'insert', action: 'insertImage', icon: Image, title: 'Insert Image' },
   { id: 'code-block', type: 'button', buttonType: 'block', action: 'toggleCodeBlock', icon: Code, title: 'Code Block' },
   { id: 'blockquote', type: 'button', buttonType: 'block', action: 'toggleBlockquote', icon: Quote, title: 'Quote' },
   { id: 'horizontal-rule', type: 'button', buttonType: 'insert', action: 'insertHorizontalRule', icon: Minus, title: 'Horizontal Line' },
@@ -362,6 +360,7 @@ function handleToolbarAction(action: string) {
     toggleCodeBlock,
     toggleBlockquote,
     insertHorizontalRule,
+    insertImage,
   };
 
   if (builtInActions[action]) {
@@ -475,6 +474,14 @@ async function createEditor() {
         [CrepeFeature.Latex]: false,
       },
       featureConfigs: {
+        [CrepeFeature.ImageBlock]: {
+          onUpload: async (file: File) => {
+            debug.log('ImageBlock upload:', file.name, file.size);
+            const result = await uploadApi.upload(props.filePath, file);
+            debug.log('Image uploaded to:', result.url);
+            return result.url;
+          },
+        },
         [CrepeFeature.Toolbar]: {
           buildToolbar: (builder: any) => {
             // Add a new group for custom marks
@@ -776,6 +783,25 @@ function insertHorizontalRule() {
   });
 }
 
+function insertImage() {
+  if (!crepe) return;
+  crepe.editor?.action((ctx) => {
+    const commandManager = ctx.get(commandsCtx);
+    const view = ctx.get(editorViewCtx);
+    const imageBlock = view.state.schema.nodes['image-block'];
+
+    if (!imageBlock) {
+      debug.error('imageBlock node type not found in schema');
+      return;
+    }
+
+    commandManager.call(clearTextInCurrentBlockCommand.key);
+    commandManager.call(addBlockTypeCommand.key, {
+      nodeType: imageBlock,
+    });
+  });
+}
+
 function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6') {
   if (!crepe) return;
 
@@ -937,21 +963,6 @@ function scheduleAutoSave() {
 
 // Placeholder handlers for deferred features
 // These will be implemented in a later phase
-async function handleImageUpload(e: Event) {
-  toast.error('Image upload not yet implemented');
-  const input = e.target as HTMLInputElement;
-  input.value = '';
-}
-
-async function handleFileUpload(e: Event) {
-  toast.error('File attachment not yet implemented');
-  const input = e.target as HTMLInputElement;
-  input.value = '';
-}
-
-function handlePasteMarkdown(_text: string) {
-  toast.error('Paste markdown not yet implemented');
-}
 
 let unsubscribeShortcut: (() => void) | null = null;
 
@@ -1135,12 +1146,6 @@ watch(externalReloadPath, (path) => {
     <!-- Editor -->
     <div v-if="!loading" ref="editorEl" class="editor-wrap flex-1 min-h-0"></div>
 
-    <!-- Hidden file inputs for toolbar buttons (not yet hooked up) -->
-    <input ref="imageInputRef" type="file" class="hidden" accept="image/*" @change="handleImageUpload" />
-    <input ref="fileInputRef" type="file" class="hidden" @change="handleFileUpload" />
-
-    <!-- Paste as markdown modal (not yet hooked up) -->
-    <PasteMarkdownModal v-model:open="pasteModalOpen" @submit="handlePasteMarkdown" />
 
     <!-- Link modal -->
     <div v-if="linkModalOpen" class="modal modal-open" @click.self="cancelLink">
