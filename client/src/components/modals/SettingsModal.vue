@@ -33,6 +33,7 @@ const TOOLBAR_DEFINITIONS: ToolbarButtonDef[] = [
   { id: 'code-block', label: 'Code Block' },
   { id: 'blockquote', label: 'Quote' },
   { id: 'horizontal-rule', label: 'Horizontal Line' },
+  { id: 'print', label: 'Print' },
 ];
 
 const toolbarDefinitionsMap = new Map(TOOLBAR_DEFINITIONS.map(def => [def.id, def]));

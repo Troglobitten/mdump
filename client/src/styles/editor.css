@@ -179,14 +179,8 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   .resize-handle,
   .toast-container,
   .modal-backdrop,
-  .context-menu {
-    display: none !important;
-  }
-
-  /* Hide toolbar, breadcrumb, attachment bar */
-  .milkdown-toolbar,
-  .breadcrumb,
-  .attachment-bar {
+  .context-menu,
+  .no-print {
     display: none !important;
   }
 
@@ -215,15 +209,26 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
     height: auto !important;
   }
 
-  /* Print-friendly typography */
-  body {
+  /* Print-friendly typography - force white background on containers */
+  html,
+  body,
+  #app,
+  main {
     background: white !important;
+    background-color: white !important;
     color: black !important;
   }
 
   .editor-wrap,
+  .editor-wrap > div,
   .editor-wrap .ProseMirror {
     background: white !important;
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Reset text color for paragraphs and common elements */
+  p, span, div, li, td, th {
     color: black !important;
   }
 
@@ -260,21 +265,95 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
     text-decoration: underline !important;
   }
 
-  /* Code blocks */
-  .editor-wrap pre {
-    background: #f0f0f0 !important;
-    border: 1px solid #d0d0d0 !important;
-    color: black !important;
+  /* Code blocks - print friendly */
+  .editor-wrap pre,
+  .editor-wrap .cm-editor,
+  .editor-wrap .code-block,
+  .editor-wrap .cm-wrap,
+  .editor-wrap .cm-scroller,
+  .editor-wrap .cm-content,
+  .editor-wrap .cm-line,
+  .editor-wrap [data-node-type="code_block"],
+  .editor-wrap [data-node-type="code_block"] *,
+  .editor-wrap .ProseMirror pre,
+  .editor-wrap .ProseMirror .code-block,
+  .editor-wrap .milkdown-menu-wrapper {
+    background: #f5f5f5 !important;
+    background-color: #f5f5f5 !important;
+    border-color: #cccccc !important;
+    color: #000000 !important;
+  }
+
+  .editor-wrap pre,
+  .editor-wrap .cm-editor {
+    border: 1px solid #cccccc !important;
+    border-radius: 4px !important;
+    padding: 12px !important;
     page-break-inside: avoid;
   }
 
+  /* Inline code */
   .editor-wrap code {
-    background: #f0f0f0 !important;
-    color: black !important;
+    background: #f5f5f5 !important;
+    color: #000000 !important;
+    padding: 2px 4px !important;
+    border-radius: 3px !important;
+    border: 1px solid #e0e0e0 !important;
   }
 
+  /* Code inside pre blocks */
   .editor-wrap pre code {
     background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Override all code block backgrounds and nested elements */
+  .editor-wrap pre,
+  .editor-wrap pre *,
+  .editor-wrap .cm-editor,
+  .editor-wrap .cm-editor *,
+  .editor-wrap .code-block,
+  .editor-wrap .code-block *,
+  .editor-wrap [class*="cm-"],
+  .editor-wrap [class*="code"] {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  /* Apply light background only to main containers */
+  .editor-wrap pre,
+  .editor-wrap .cm-editor {
+    background: #f5f5f5 !important;
+    background-color: #f5f5f5 !important;
+  }
+
+  /* Subtle syntax highlighting for readability */
+  .editor-wrap .cm-keyword,
+  .editor-wrap .token.keyword {
+    color: #0000cc !important;
+    font-weight: bold !important;
+  }
+
+  .editor-wrap .cm-string,
+  .editor-wrap .token.string {
+    color: #008800 !important;
+  }
+
+  .editor-wrap .cm-comment,
+  .editor-wrap .token.comment {
+    color: #666666 !important;
+    font-style: italic !important;
+  }
+
+  .editor-wrap .cm-number,
+  .editor-wrap .token.number {
+    color: #cc0000 !important;
+  }
+
+  .editor-wrap .cm-function,
+  .editor-wrap .token.function {
+    color: #0066cc !important;
   }
 
   /* Blockquotes */

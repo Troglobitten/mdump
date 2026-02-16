@@ -9,7 +9,7 @@ import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer } from 'lucide-vue-next';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
@@ -344,6 +344,7 @@ const TOOLBAR_BUTTON_DEFINITIONS: ToolbarButtonDefinition[] = [
   { id: 'code-block', type: 'button', buttonType: 'block', action: 'toggleCodeBlock', icon: Code, title: 'Code Block' },
   { id: 'blockquote', type: 'button', buttonType: 'block', action: 'toggleBlockquote', icon: Quote, title: 'Quote' },
   { id: 'horizontal-rule', type: 'button', buttonType: 'insert', action: 'insertHorizontalRule', icon: Minus, title: 'Horizontal Line' },
+  { id: 'print', type: 'button', buttonType: 'insert', action: 'printDocument', icon: Printer, title: 'Print' },
 ];
 
 // Create a lookup map for quick access
@@ -361,6 +362,7 @@ function handleToolbarAction(action: string) {
     toggleBlockquote,
     insertHorizontalRule,
     insertImage,
+    printDocument,
   };
 
   if (builtInActions[action]) {
@@ -802,6 +804,10 @@ function insertImage() {
   });
 }
 
+function printDocument() {
+  window.print();
+}
+
 function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6') {
   if (!crepe) return;
 
@@ -1056,7 +1062,7 @@ watch(externalReloadPath, (path) => {
     </div>
 
     <!-- Custom Toolbar -->
-    <div v-if="!loading" class="flex items-center gap-1 py-0.5 px-3 border-b border-base-300 bg-base-200/50">
+    <div v-if="!loading" class="no-print flex items-center gap-1 py-0.5 px-3 border-b border-base-300 bg-base-200/50">
       <template v-for="item in computedToolbarItems" :key="item.id">
         <!-- Divider -->
         <div v-if="item.type === 'divider'" class="w-px h-5 bg-base-300 mx-1"></div>

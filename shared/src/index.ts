@@ -180,6 +180,7 @@ export const DEFAULT_TOOLBAR_CONFIG: ToolbarConfig = {
     { id: 'code-block', visible: true, order: 13 },
     { id: 'blockquote', visible: true, order: 14 },
     { id: 'horizontal-rule', visible: true, order: 15 },
+    { id: 'print', visible: true, order: 16 },
   ]
 };
 

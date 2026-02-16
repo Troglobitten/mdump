@@ -121,7 +121,7 @@ defineExpose({ loadAttachments });
 
 <template>
   <div
-    class="border-b border-base-300 bg-base-200/30"
+    class="no-print border-b border-base-300 bg-base-200/30"
     @drop.prevent="handleDrop"
     @dragover.prevent
   >

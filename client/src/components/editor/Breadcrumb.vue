@@ -26,7 +26,7 @@ const isDirty = computed(() => getTabByPath(props.path)?.isDirty ?? false);
 </script>
 
 <template>
-  <div class="flex items-center gap-1 px-4 py-2 text-sm text-base-content/60 border-b border-base-300 bg-base-200/50">
+  <div class="no-print flex items-center gap-1 px-4 py-2 text-sm text-base-content/60 border-b border-base-300 bg-base-200/50">
     <template v-for="(part, index) in parts" :key="index">
       <span
         :class="{
