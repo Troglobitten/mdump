@@ -10,7 +10,7 @@ import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
 import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2 } from 'lucide-vue-next';
-import { splitEditing, splitEditingOptionsCtx, toggleSplitEditing } from '@milkdown-lab/plugin-split-editing';
+import { splitEditing, splitEditingOptionsCtx } from '@milkdown-lab/plugin-split-editing';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
@@ -880,6 +880,8 @@ function setViewMode(mode: 'wysiwyg' | 'split' | 'source') {
   const wrapper = cachedSplitWrapper;
   const wysiwyg = cachedWysiwygPane;
   const source = cachedSourcePane;
+
+  if (!wysiwyg || !source) return;
 
   // Reset display for both panes
   wysiwyg.style.display = '';
