@@ -186,11 +186,12 @@ export function useSettings() {
   };
 
   function applyEditorStyles() {
-    let styleEl = document.getElementById('editor-custom-styles') as HTMLStyleElement | null;
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = 'editor-custom-styles';
-      document.head.appendChild(styleEl);
+    const root = document.documentElement;
+
+    // Remove old dynamic style element if it exists
+    const oldStyleEl = document.getElementById('editor-custom-styles');
+    if (oldStyleEl) {
+      oldStyleEl.remove();
     }
 
     // Screen styles
@@ -199,30 +200,29 @@ export function useSettings() {
     const fontFamily = FONT_MAP[preferences.value.editorFont] || FONT_MAP['sans-serif'];
 
     const paperWidth = PAGE_WIDTH_MAP[preferences.value.paperSize] || '21cm';
-    const pageWidthPadding = preferences.value.pageWidthMode
-      ? `padding-left: max(2em, calc((100% - ${paperWidth}) / 2)) !important;
-         padding-right: max(2em, calc((100% - ${paperWidth}) / 2)) !important;`
-      : '';
+    const paddingValue = preferences.value.pageWidthMode
+      ? `max(2em, calc((100% - ${paperWidth}) / 2))`
+      : '0';
 
-    // Print styles
+    // Set CSS custom properties
+    root.style.setProperty('--editor-spacing-factor', factor);
+    root.style.setProperty('--editor-font-scale', String(fontSize));
+    root.style.setProperty('--editor-font-family', fontFamily);
+    root.style.setProperty('--editor-padding-left', paddingValue);
+    root.style.setProperty('--editor-padding-right', paddingValue);
+
+    // Print styles (still need a style tag for media queries)
     const printFactor = SPACING_MAP[preferences.value.printVerticalSpacing] || '0.35';
     const printFontSize = preferences.value.printFontScale / 100;
 
-    styleEl.textContent = `
-      /* Set Milkdown font CSS variables */
-      .milkdown {
-        --crepe-font-title: ${fontFamily};
-        --crepe-font-default: ${fontFamily};
-        --crepe-font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-      }
+    let printStyleEl = document.getElementById('editor-print-styles') as HTMLStyleElement | null;
+    if (!printStyleEl) {
+      printStyleEl = document.createElement('style');
+      printStyleEl.id = 'editor-print-styles';
+      document.head.appendChild(printStyleEl);
+    }
 
-      /* Font size and spacing (Milkdown doesn't have variables for these) */
-      .editor-wrap .ProseMirror {
-        --spacing-factor: ${factor};
-        font-size: ${fontSize}em;
-        ${pageWidthPadding}
-      }
-
+    printStyleEl.textContent = `
       @media print {
         .editor-wrap .ProseMirror {
           --spacing-factor: ${printFactor} !important;

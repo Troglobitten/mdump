@@ -9,7 +9,8 @@ import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2 } from 'lucide-vue-next';
+import { splitEditing, splitEditingOptionsCtx, toggleSplitEditing } from '@milkdown-lab/plugin-split-editing';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
@@ -291,6 +292,7 @@ const linkUrl = ref('');
 const linkTitle = ref('');
 const blockStyleDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
 const listDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
+const viewModeDropdownRef = ref<HTMLDivElement | null>(null);
 
 // Milkdown Crepe instance
 let crepe: Crepe | null = null;
@@ -309,6 +311,17 @@ const currentBlockType = ref<'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h
 const blockStyleDropdownOpen = ref(false);
 const currentListType = ref<'none' | 'bullet' | 'ordered' | 'task'>('none');
 const listDropdownOpen = ref(false);
+
+// Split editing view mode: 'wysiwyg' (default), 'split', or 'source'
+// Load from localStorage or default to 'wysiwyg'
+const savedViewMode = localStorage.getItem('editor-view-mode') as 'wysiwyg' | 'split' | 'source' | null;
+const viewMode = ref<'wysiwyg' | 'split' | 'source'>(savedViewMode || 'wysiwyg');
+const viewModeDropdownOpen = ref(false);
+
+// Save view mode to localStorage whenever it changes
+watch(viewMode, (newMode) => {
+  localStorage.setItem('editor-view-mode', newMode);
+});
 
 // Custom marks active state (generated from config)
 const customMarksActiveState = new Map<string, Ref<boolean>>();
@@ -518,10 +531,27 @@ async function createEditor() {
     // Add custom marks feature before creating
     crepe.addFeature(customMarksFeature);
 
+    // Add split editing plugin with configuration
+    crepe.editor
+      .config((ctx) => {
+        ctx.set(splitEditingOptionsCtx.key, {
+          wrapperAttributes: { class: 'split-editor' },
+          attributes: { class: 'milkdown-split-editor' },
+          hiddenAttribute: { class: 'hidden' },
+          hiddenWrapperAttributes: { class: 'single-editor' },
+        });
+      })
+      .use(splitEditing);
+
     debug.time('Crepe initialization');
     await crepe.create();
     debug.timeEnd('Crepe initialization');
     debug.log('Crepe created successfully');
+
+    // Apply initial view mode immediately after next render
+    requestAnimationFrame(() => {
+      setViewMode(viewMode.value);
+    });
 
     // Listen to markdown updates for dirty detection and auto-save
     crepe.on((ctx) => {
@@ -825,6 +855,51 @@ function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6
   blockStyleDropdownOpen.value = false;
 }
 
+// Cache DOM references to avoid repeated queries
+let cachedSplitWrapper: HTMLElement | null = null;
+let cachedWysiwygPane: HTMLElement | null = null;
+let cachedSourcePane: HTMLElement | null = null;
+
+function setViewMode(mode: 'wysiwyg' | 'split' | 'source') {
+  viewMode.value = mode;
+  viewModeDropdownOpen.value = false;
+
+  if (!crepe?.editor) return;
+
+  // Get or cache DOM references
+  if (!cachedSplitWrapper) {
+    cachedSplitWrapper = document.querySelector('.split-editor') as HTMLElement;
+    if (!cachedSplitWrapper) return;
+
+    cachedWysiwygPane = cachedSplitWrapper.children[0] as HTMLElement;
+    cachedSourcePane = cachedSplitWrapper.querySelector('.milkdown-split-editor') as HTMLElement;
+
+    if (!cachedWysiwygPane || !cachedSourcePane) return;
+  }
+
+  const wrapper = cachedSplitWrapper;
+  const wysiwyg = cachedWysiwygPane;
+  const source = cachedSourcePane;
+
+  // Reset display for both panes
+  wysiwyg.style.display = '';
+  source.style.display = '';
+
+  // Apply view mode
+  if (mode === 'wysiwyg') {
+    source.style.display = 'none';
+    wrapper.style.gridTemplateColumns = '1fr';
+    wrapper.setAttribute('data-view-mode', 'wysiwyg');
+  } else if (mode === 'source') {
+    wysiwyg.style.display = 'none';
+    wrapper.style.gridTemplateColumns = '1fr';
+    wrapper.setAttribute('data-view-mode', 'source');
+  } else {
+    wrapper.style.gridTemplateColumns = '1fr 1fr';
+    wrapper.setAttribute('data-view-mode', 'split');
+  }
+}
+
 const blockTypeIcons = {
   paragraph: Type,
   h1: Heading1,
@@ -989,6 +1064,11 @@ function handleClickOutside(event: MouseEvent) {
   if (listDropdown && !listDropdown.contains(event.target as Node)) {
     listDropdownOpen.value = false;
   }
+
+  // Handle viewModeDropdownRef
+  if (viewModeDropdownRef.value && !viewModeDropdownRef.value.contains(event.target as Node)) {
+    viewModeDropdownOpen.value = false;
+  }
 }
 
 onMounted(async () => {
@@ -1013,6 +1093,11 @@ onUnmounted(() => {
 
   // Remove click outside listener
   document.removeEventListener('click', handleClickOutside);
+
+  // Clear DOM cache for next component instance
+  cachedSplitWrapper = null;
+  cachedWysiwygPane = null;
+  cachedSourcePane = null;
 
   if (unsubscribeShortcut) {
     unsubscribeShortcut();
@@ -1147,6 +1232,38 @@ watch(externalReloadPath, (path) => {
           <component :is="item.icon" :size="16" />
         </button>
       </template>
+
+      <!-- View Mode Dropdown (Split Editing) -->
+      <div ref="viewModeDropdownRef" class="relative ml-auto">
+        <button
+          type="button"
+          class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
+          @mousedown.prevent
+          @click="viewModeDropdownOpen = !viewModeDropdownOpen"
+          title="View mode"
+        >
+          <Columns2 :size="16" />
+          <ChevronDown :size="12" />
+        </button>
+
+        <!-- Dropdown menu -->
+        <div
+          v-if="viewModeDropdownOpen"
+          class="absolute top-full right-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[140px]"
+          @mousedown.prevent
+        >
+          <button
+            v-for="mode in [{ value: 'wysiwyg', label: 'WYSIWYG' }, { value: 'split', label: 'Split' }, { value: 'source', label: 'Source' }]"
+            :key="mode.value"
+            type="button"
+            class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
+            :class="{ 'bg-base-200 text-primary': viewMode === mode.value }"
+            @click="setViewMode(mode.value as any)"
+          >
+            <span>{{ mode.label }}</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Editor -->

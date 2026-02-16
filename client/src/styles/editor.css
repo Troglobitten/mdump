@@ -184,6 +184,20 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
     display: none !important;
   }
 
+  /* Hide source editor in split/source view - always print WYSIWYG */
+  .milkdown-split-editor {
+    display: none !important;
+  }
+
+  /* Ensure WYSIWYG pane is visible and full width in print */
+  .split-editor {
+    display: block !important;
+  }
+
+  .split-editor > .milkdown {
+    display: block !important;
+  }
+
   /* Remove viewport constraints */
   html, body, #app {
     height: auto !important;
@@ -389,4 +403,63 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
 /* Floating toolbar customization */
 .milkdown .milkdown-toolbar .toolbar-item.active svg {
   fill: color-mix(in srgb, var(--crepe-color-primary) 40%, transparent);
+}
+
+/* ========================================
+   Split Editing Plugin Styles
+   ======================================== */
+
+/* Split editor wrapper - grid layout (columns set dynamically by JS) */
+.split-editor {
+  display: grid;
+  grid-template-rows: 1fr;
+  gap: 1px;
+  width: 100%;
+}
+
+/* Individual editor panes */
+.milkdown-split-editor {
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Ensure WYSIWYG pane also scrolls properly */
+.split-editor > .milkdown {
+  overflow: auto;
+  min-height: 0;
+}
+
+/* User preferences - dynamic values via CSS variables */
+.milkdown {
+  --crepe-font-title: var(--editor-font-family, inherit);
+  --crepe-font-default: var(--editor-font-family, inherit);
+}
+
+.editor-wrap .ProseMirror {
+  --spacing-factor: var(--editor-spacing-factor, 0.35);
+  font-size: calc(var(--editor-font-scale, 1) * 1em);
+}
+
+/* Apply padding only when NOT in split view */
+.editor-wrap:not(:has(.split-editor[data-view-mode="split"])) .ProseMirror {
+  padding-left: var(--editor-padding-left, 0);
+  padding-right: var(--editor-padding-right, 0);
+}
+
+/* Style the source code editor (CodeMirror) in split view */
+.split-editor .cm-editor {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  height: 100%;
+}
+
+/* Disable line wrapping in split mode */
+.split-editor[data-view-mode="split"] > .milkdown .ProseMirror {
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Ensure proper scrolling */
+.split-editor .cm-scroller {
+  overflow: auto;
 }
