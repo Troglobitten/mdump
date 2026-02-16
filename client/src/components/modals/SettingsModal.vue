@@ -29,6 +29,7 @@ const TOOLBAR_DEFINITIONS: ToolbarButtonDef[] = [
   { id: 'superscript', label: 'Superscript' },
   { id: 'subscript', label: 'Subscript' },
   { id: 'marker', label: 'Highlight' },
+  { id: 'image', label: 'Insert Image' },
   { id: 'code-block', label: 'Code Block' },
   { id: 'blockquote', label: 'Quote' },
   { id: 'horizontal-rule', label: 'Horizontal Line' },

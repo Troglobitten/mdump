@@ -176,9 +176,10 @@ export const DEFAULT_TOOLBAR_CONFIG: ToolbarConfig = {
     { id: 'subscript', visible: true, order: 9 },
     { id: 'marker', visible: true, order: 10 },
     { id: 'divider-3', visible: true, order: 11 },
-    { id: 'code-block', visible: true, order: 12 },
-    { id: 'blockquote', visible: true, order: 13 },
-    { id: 'horizontal-rule', visible: true, order: 14 },
+    { id: 'image', visible: true, order: 12 },
+    { id: 'code-block', visible: true, order: 13 },
+    { id: 'blockquote', visible: true, order: 14 },
+    { id: 'horizontal-rule', visible: true, order: 15 },
   ]
 };
 
