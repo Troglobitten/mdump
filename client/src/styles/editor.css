@@ -417,16 +417,22 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   width: 100%;
 }
 
-/* Individual editor panes */
+/* Individual editor panes.
+   Both need overflow:auto + min-width/height:0 so CSS grid can constrain
+   them to their 1fr allocation. Without this, min-width:auto (default) lets
+   wide content (code blocks, tables) expand the WYSIWYG pane beyond 1fr. */
 .milkdown-split-editor {
   overflow: auto;
   min-height: 0;
+  min-width: 0;
 }
 
-/* Ensure WYSIWYG pane also scrolls properly */
-.split-editor > .milkdown {
+/* The WYSIWYG pane is .ProseMirror, a direct child of .split-editor.
+   (.milkdown is the PARENT of .split-editor, not a child — previous selector was wrong.) */
+.split-editor > .ProseMirror {
   overflow: auto;
   min-height: 0;
+  min-width: 0;
 }
 
 /* User preferences - dynamic values via CSS variables */
@@ -446,15 +452,18 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   padding-right: var(--editor-padding-right, 0);
 }
 
-/* Style the source code editor (CodeMirror) in split view */
-.split-editor .cm-editor {
+/* Style the source code editor (CodeMirror) in split view.
+   Scoped to .milkdown-split-editor so it doesn't affect CodeMirror
+   instances embedded inside code blocks in the WYSIWYG pane. */
+.milkdown-split-editor .cm-editor {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 14px;
   height: 100%;
 }
 
-/* Disable line wrapping in split mode */
-.split-editor[data-view-mode="split"] > .milkdown .ProseMirror {
+/* Disable line wrapping on the WYSIWYG pane in split mode.
+   The WYSIWYG pane is .ProseMirror, a direct child of .split-editor. */
+.split-editor[data-view-mode="split"] > .ProseMirror {
   white-space: pre;
   overflow-x: auto;
 }

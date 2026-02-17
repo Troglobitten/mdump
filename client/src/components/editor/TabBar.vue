@@ -115,7 +115,7 @@ watch(() => tabs.value.length, () => {
       <draggable
         :list="[...tabs]"
         item-key="path"
-        class="flex items-center gap-1"
+        class="flex items-center gap-1 w-max"
         ghost-class="opacity-50"
         @start="dragging = true"
         @end="handleDragEnd"

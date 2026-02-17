@@ -9,7 +9,7 @@ import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2 } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, ChevronLeft, ChevronRight, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2 } from 'lucide-vue-next';
 import { splitEditing, splitEditingOptionsCtx } from '@milkdown-lab/plugin-split-editing';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
@@ -293,6 +293,27 @@ const linkTitle = ref('');
 const blockStyleDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
 const listDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
 const viewModeDropdownRef = ref<HTMLDivElement | null>(null);
+
+// Toolbar scroll state
+const toolbarScrollContainer = ref<HTMLDivElement | null>(null);
+const showToolbarLeftArrow = ref(false);
+const showToolbarRightArrow = ref(false);
+let toolbarResizeObserver: ResizeObserver | null = null;
+
+function checkToolbarOverflow() {
+  const el = toolbarScrollContainer.value;
+  if (!el) return;
+  showToolbarLeftArrow.value = el.scrollLeft > 0;
+  showToolbarRightArrow.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+}
+
+function scrollToolbarLeft() {
+  toolbarScrollContainer.value?.scrollBy({ left: -200, behavior: 'smooth' });
+}
+
+function scrollToolbarRight() {
+  toolbarScrollContainer.value?.scrollBy({ left: 200, behavior: 'smooth' });
+}
 
 // Milkdown Crepe instance
 let crepe: Crepe | null = null;
@@ -1080,6 +1101,15 @@ onMounted(async () => {
   // Add click outside listener for dropdown
   document.addEventListener('click', handleClickOutside);
 
+  // Toolbar scroll
+  const el = toolbarScrollContainer.value;
+  if (el) {
+    el.addEventListener('scroll', checkToolbarOverflow);
+    toolbarResizeObserver = new ResizeObserver(checkToolbarOverflow);
+    toolbarResizeObserver.observe(el);
+  }
+  nextTick(checkToolbarOverflow);
+
   // Register Ctrl+S shortcut
   unsubscribeShortcut = registerShortcut('ctrl+s', () => {
     if (activeTabPath.value === props.filePath) {
@@ -1095,6 +1125,10 @@ onUnmounted(() => {
 
   // Remove click outside listener
   document.removeEventListener('click', handleClickOutside);
+
+  // Toolbar scroll cleanup
+  toolbarScrollContainer.value?.removeEventListener('scroll', checkToolbarOverflow);
+  toolbarResizeObserver?.disconnect();
 
   // Clear DOM cache for next component instance
   cachedSplitWrapper = null;
@@ -1149,7 +1183,19 @@ watch(externalReloadPath, (path) => {
     </div>
 
     <!-- Custom Toolbar -->
-    <div v-if="!loading" class="no-print flex items-center gap-1 py-0.5 px-3 border-b border-base-300 bg-base-200/50">
+    <div v-if="!loading" class="no-print flex items-center py-0.5 border-b border-base-300 bg-base-200/50">
+      <button
+        v-if="showToolbarLeftArrow"
+        type="button"
+        class="btn btn-ghost btn-xs btn-square flex-shrink-0"
+        @mousedown.prevent
+        @click="scrollToolbarLeft"
+      >
+        <ChevronLeft class="w-3 h-3" />
+      </button>
+
+      <div ref="toolbarScrollContainer" class="flex-1 overflow-hidden min-w-0">
+        <div class="flex items-center gap-1 px-3 w-max">
       <template v-for="item in computedToolbarItems" :key="item.id">
         <!-- Divider -->
         <div v-if="item.type === 'divider'" class="w-px h-5 bg-base-300 mx-1"></div>
@@ -1234,9 +1280,21 @@ watch(externalReloadPath, (path) => {
           <component :is="item.icon" :size="16" />
         </button>
       </template>
+        </div>
+      </div>
 
-      <!-- View Mode Dropdown (Split Editing) -->
-      <div ref="viewModeDropdownRef" class="relative ml-auto">
+      <button
+        v-if="showToolbarRightArrow"
+        type="button"
+        class="btn btn-ghost btn-xs btn-square flex-shrink-0"
+        @mousedown.prevent
+        @click="scrollToolbarRight"
+      >
+        <ChevronRight class="w-3 h-3" />
+      </button>
+
+      <!-- View Mode Dropdown (Split Editing) - pinned right, outside scroll area -->
+      <div ref="viewModeDropdownRef" class="relative flex-shrink-0 pr-1">
         <button
           type="button"
           class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
