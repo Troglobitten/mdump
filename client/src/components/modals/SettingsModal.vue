@@ -39,7 +39,7 @@ const toolbarDefinitionsMap = new Map(TOOLBAR_DEFINITIONS.map(def => [def.id, de
 
 const open = defineModel<boolean>('open', { default: false });
 
-const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug, setMdumpThemedEditor, setEditorFont, updateToolbarConfig } = useSettings();
+const { preferences, setTheme, setAutoSaveEnabled, setAutoSaveDebounce, setExternalChangeWarning, setPaperSize, setVerticalSpacing, setFontScale, setPageWidthMode, setPrintFontScale, setPrintVerticalSpacing, setDebug, setMdumpThemedEditor, setEditorFont, updateToolbarConfig, setShowDocumentOutline } = useSettings();
 const { availableThemes, currentTheme } = useTheme();
 const { changePassword, version } = useAuth();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
@@ -378,6 +378,21 @@ function close() {
               </label>
               <label class="label">
                 <span class="label-text-alt">Constrain editor width to match the selected paper size</span>
+              </label>
+            </div>
+
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Document outline panel</span>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary toggle-sm"
+                  :checked="preferences.showDocumentOutline"
+                  @change="(e) => setShowDocumentOutline((e.target as HTMLInputElement).checked)"
+                />
+              </label>
+              <label class="label">
+                <span class="label-text-alt">Shows a heading outline below the file list. Drag the divider to resize.</span>
               </label>
             </div>
           </div>

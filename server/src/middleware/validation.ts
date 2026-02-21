@@ -138,4 +138,6 @@ export const preferencesSchema = z.object({
   mdumpThemedEditor: z.boolean().optional(),
   editorFont: z.enum(['sans-serif', 'serif', 'monospace']).optional(),
   toolbarConfig: toolbarConfigSchema.optional(),
+  showDocumentOutline: z.boolean().optional(),
+  outlinePanelHeight: z.number().positive().optional(),
 }).partial();

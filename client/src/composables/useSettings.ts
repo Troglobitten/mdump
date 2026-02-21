@@ -140,6 +140,10 @@ export function useSettings() {
     applyEditorStyles();
   }
 
+  async function setShowDocumentOutline(enabled: boolean): Promise<void> {
+    await updatePreferences({ showDocumentOutline: enabled });
+  }
+
   async function updateToolbarConfig(config: Partial<import('@mdump/shared').ToolbarConfig>): Promise<void> {
     const currentConfig = preferences.value.toolbarConfig;
     await updatePreferences({
@@ -255,6 +259,7 @@ export function useSettings() {
     setMdumpThemedEditor,
     setEditorFont,
     updateToolbarConfig,
+    setShowDocumentOutline,
     applyEditorStyles,
   };
 }

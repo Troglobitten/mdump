@@ -14,6 +14,8 @@ import { splitEditing, splitEditingOptionsCtx } from '@milkdown-lab/plugin-split
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
 import { useSettings } from '@/composables/useSettings';
+import { useOutline } from '@/composables/useOutline';
+import type { OutlineItem } from '@/composables/useOutline';
 import { useKeyboard } from '@/composables/useKeyboard';
 import { useDebug } from '@/composables/useDebug';
 import type { useToast } from '@/composables/useToast';
@@ -276,6 +278,7 @@ const props = defineProps<{
 const { getFile, saveFile } = useFiles();
 const { markDirty, activeTabPath } = useTabs();
 const { preferences } = useSettings();
+const { updateHeadings, clearHeadings } = useOutline();
 const { registerShortcut } = useKeyboard();
 const debug = useDebug('EditorContainer');
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
@@ -463,6 +466,20 @@ const computedToolbarItems = computed(() => {
 
 const isDirty = computed(() => content.value !== lastSavedContent.value);
 
+// Extract headings from rendered ProseMirror DOM
+function extractHeadings() {
+  if (!editorEl.value) return;
+  const pm = editorEl.value.querySelector('.ProseMirror');
+  if (!pm) return;
+  const items: OutlineItem[] = [];
+  pm.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(el => {
+    const text = el.textContent?.trim() || '';
+    const id = (el as HTMLElement).id || '';
+    if (text) items.push({ level: parseInt(el.tagName[1]), text, id });
+  });
+  updateHeadings(items);
+}
+
 // Load file content
 async function loadFile() {
   loading.value = true;
@@ -609,6 +626,9 @@ async function createEditor() {
       setViewMode(viewMode.value);
     });
 
+    // Initial heading extraction
+    nextTick(extractHeadings);
+
     // Listen to markdown updates for dirty detection and auto-save
     crepe.on((ctx) => {
       ctx.updated(() => {
@@ -629,6 +649,8 @@ async function createEditor() {
             debug.log('Scheduling auto-save (debounce:', preferences.value.autoSave.debounceMs + 'ms)');
             scheduleAutoSave();
           }
+
+          nextTick(extractHeadings);
         }
       });
     });
@@ -1210,6 +1232,9 @@ onMounted(async () => {
 
 onUnmounted(() => {
   debug.log('Component unmounting');
+
+  // Clear heading outline
+  clearHeadings();
 
   // Remove click outside listener
   document.removeEventListener('click', handleClickOutside);

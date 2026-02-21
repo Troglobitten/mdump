@@ -195,6 +195,15 @@ body {
   @apply bg-primary/50;
 }
 
+/* Outline panel resize handle */
+.outline-resize-handle {
+  @apply h-1 cursor-row-resize bg-transparent hover:bg-primary/30 w-full shrink-0 transition-colors;
+}
+
+.outline-resize-handle:active {
+  @apply bg-primary/50;
+}
+
 /* Search results */
 .search-result {
   @apply px-3 py-2 cursor-pointer hover:bg-base-200 transition-colors;

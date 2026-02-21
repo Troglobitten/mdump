@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue';
+import { ref, computed, inject, watch } from 'vue';
 import { PanelLeftClose, Plus, Settings, LogOut, FileText, FolderPlus } from 'lucide-vue-next';
 import { useAuth } from '@/composables/useAuth';
 import { useFiles } from '@/composables/useFiles';
 import { useSearch } from '@/composables/useSearch';
 import { useTabs } from '@/composables/useTabs';
+import { useSettings } from '@/composables/useSettings';
 import type { useToast } from '@/composables/useToast';
 import FileTree from '@/components/navigator/FileTree.vue';
 import SearchBar from '@/components/navigator/SearchBar.vue';
 import SearchResults from '@/components/navigator/SearchResults.vue';
 import ViewToggle from '@/components/navigator/ViewToggle.vue';
+import DocumentOutline from '@/components/navigator/DocumentOutline.vue';
 
 const props = defineProps<{
   collapsed: boolean;
@@ -25,6 +27,7 @@ const { logout } = useAuth();
 const { selectedFolder } = useFiles();
 const { hasQuery } = useSearch();
 const { activeTabPath } = useTabs();
+const { preferences, updatePreferences } = useSettings();
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
 const openNewNote = inject<(folderPath?: string) => void>('openNewNote')!;
 const openNewFolder = inject<(folderPath?: string) => void>('openNewFolder')!;
@@ -33,6 +36,13 @@ const openSettings = inject<() => void>('openSettings')!;
 const isResizing = ref(false);
 const searchBarRef = ref<InstanceType<typeof SearchBar> | null>(null);
 const showCreateDropdown = ref(false);
+
+const showOutline = computed(() => preferences.value.showDocumentOutline);
+const outlinePanelHeight = ref(preferences.value.outlinePanelHeight ?? 200);
+
+watch(() => preferences.value.outlinePanelHeight, (v) => {
+  if (v !== undefined) outlinePanelHeight.value = v;
+});
 
 const activeFolder = computed(() => {
   if (selectedFolder.value !== null) return selectedFolder.value;
@@ -46,6 +56,23 @@ const sidebarStyle = computed(() => ({
   width: props.collapsed ? '0px' : `${props.width}px`,
   minWidth: props.collapsed ? '0px' : `${props.width}px`,
 }));
+
+function startOutlineResize(e: MouseEvent) {
+  const startY = e.clientY;
+  const startHeight = outlinePanelHeight.value;
+
+  function onMouseMove(e: MouseEvent) {
+    const delta = startY - e.clientY;
+    outlinePanelHeight.value = Math.max(80, Math.min(400, startHeight + delta));
+  }
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    updatePreferences({ outlinePanelHeight: outlinePanelHeight.value });
+  }
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
 
 function startResize(e: MouseEvent) {
   isResizing.value = true;
@@ -153,9 +180,20 @@ defineExpose({ focusSearch });
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-y-auto px-2">
-      <SearchResults v-if="hasQuery" />
-      <FileTree v-else />
+    <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <!-- File tree pane -->
+      <div class="flex-1 min-h-0 overflow-y-auto px-2">
+        <SearchResults v-if="hasQuery" />
+        <FileTree v-else />
+      </div>
+
+      <!-- Outline pane — only when enabled and not searching -->
+      <template v-if="showOutline && !hasQuery">
+        <div class="outline-resize-handle" @mousedown="startOutlineResize" />
+        <div class="overflow-y-auto shrink-0" :style="{ height: `${outlinePanelHeight}px` }">
+          <DocumentOutline />
+        </div>
+      </template>
     </div>
 
     <!-- Footer -->

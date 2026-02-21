@@ -68,6 +68,8 @@ export interface UserPreferences {
   mdumpThemedEditor: boolean;
   editorFont: 'sans-serif' | 'serif' | 'monospace';
   toolbarConfig: ToolbarConfig;
+  showDocumentOutline: boolean;
+  outlinePanelHeight: number;
 }
 
 export interface AppSettings {
@@ -207,4 +209,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   mdumpThemedEditor: true,
   editorFont: 'sans-serif',
   toolbarConfig: DEFAULT_TOOLBAR_CONFIG,
+  showDocumentOutline: false,
+  outlinePanelHeight: 200,
 };
