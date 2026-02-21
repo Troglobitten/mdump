@@ -9,7 +9,7 @@ import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, ChevronLeft, ChevronRight, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2 } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, ChevronLeft, ChevronRight, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2, Sigma } from 'lucide-vue-next';
 import { splitEditing, splitEditingOptionsCtx } from '@milkdown-lab/plugin-split-editing';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
@@ -328,6 +328,7 @@ const isStrikethroughActive = ref(false);
 const isLinkActive = ref(false);
 const isCodeBlockActive = ref(false);
 const isBlockquoteActive = ref(false);
+const isLatexActive = ref(false);
 const currentBlockType = ref<'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'>('paragraph');
 const blockStyleDropdownOpen = ref(false);
 const currentListType = ref<'none' | 'bullet' | 'ordered' | 'task'>('none');
@@ -374,6 +375,7 @@ const TOOLBAR_BUTTON_DEFINITIONS: ToolbarButtonDefinition[] = [
   { id: 'superscript', type: 'button', buttonType: 'custom', action: 'superscript', icon: Superscript, title: 'Superscript' },
   { id: 'subscript', type: 'button', buttonType: 'custom', action: 'subscript', icon: Subscript, title: 'Subscript' },
   { id: 'marker', type: 'button', buttonType: 'custom', action: 'marker', icon: Highlighter, title: 'Highlight' },
+  { id: 'latex', type: 'button', buttonType: 'insert', action: 'toggleLatex', icon: Sigma, title: 'LaTeX Formula' },
   { id: 'image', type: 'button', buttonType: 'insert', action: 'insertImage', icon: Image, title: 'Insert Image' },
   { id: 'code-block', type: 'button', buttonType: 'block', action: 'toggleCodeBlock', icon: Code, title: 'Code Block' },
   { id: 'blockquote', type: 'button', buttonType: 'block', action: 'toggleBlockquote', icon: Quote, title: 'Quote' },
@@ -397,6 +399,7 @@ function handleToolbarAction(action: string) {
     insertHorizontalRule,
     insertImage,
     printDocument,
+    toggleLatex,
   };
 
   if (builtInActions[action]) {
@@ -416,6 +419,7 @@ function getButtonActiveState(item: any): boolean {
     toggleLink: isLinkActive,
     toggleCodeBlock: isCodeBlockActive,
     toggleBlockquote: isBlockquoteActive,
+    toggleLatex: isLatexActive,
   };
 
   if (activeStateMap[item.action]) {
@@ -506,9 +510,7 @@ async function createEditor() {
     crepe = new Crepe({
       root: editorEl.value,
       defaultValue: content.value || '# Welcome\n\nStart writing...',
-      features: {
-        [CrepeFeature.Latex]: false,
-      },
+      features: {},
       featureConfigs: {
         [CrepeFeature.ImageBlock]: {
           onUpload: async (file: File) => {
@@ -564,10 +566,40 @@ async function createEditor() {
       })
       .use(splitEditing);
 
+    // The split-editing plugin's view() calls editorRoot.replaceChildren() to restructure
+    // the DOM, which detaches ALL tooltip elements (toolbar, link preview, link edit, etc.)
+    // that TooltipProvider instances already appended to .milkdown. Because TooltipProvider
+    // only appends once (_initialized flag), they are never re-attached. Collect every
+    // detached element that is NOT ProseMirror and re-append them all to .milkdown.
+    const detachedOverlays: HTMLElement[] = [];
+    const toolbarObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        // Only process removals whose target is .milkdown itself, not deeper nodes.
+        // This avoids accidentally collecting ancestor elements.
+        if (!(mutation.target instanceof HTMLElement) || !mutation.target.classList.contains('milkdown')) continue;
+        for (const node of Array.from(mutation.removedNodes)) {
+          if (node instanceof HTMLElement && !node.classList.contains('ProseMirror')) {
+            detachedOverlays.push(node);
+          }
+        }
+      }
+    });
+    toolbarObserver.observe(editorEl.value, { childList: true, subtree: true });
+
     debug.time('Crepe initialization');
     await crepe.create();
     debug.timeEnd('Crepe initialization');
+    toolbarObserver.disconnect();
     debug.log('Crepe created successfully');
+
+    // Re-attach all detached tooltip overlays to .milkdown
+    if (detachedOverlays.length > 0) {
+      const milkdownEl = editorEl.value.querySelector('.milkdown');
+      if (milkdownEl) {
+        detachedOverlays.forEach(el => milkdownEl.appendChild(el));
+        debug.log('Re-attached overlays to .milkdown:', detachedOverlays.map(el => el.className));
+      }
+    }
 
     // Apply initial view mode immediately after next render
     requestAnimationFrame(() => {
@@ -706,6 +738,17 @@ function updateToolbarStateFromView(view: any) {
 
     isBlockquoteActive.value = inBlockquote;
     currentListType.value = listType;
+
+    // Check for inline LaTeX node at cursor position
+    const mathInlineType = state.schema.nodes['math_inline'];
+    if (mathInlineType) {
+      const { from, to } = state.selection;
+      let hasLatex = false;
+      state.doc.nodesBetween(from, to, (node: any) => {
+        if (node.type === mathInlineType) { hasLatex = true; return false; }
+      });
+      isLatexActive.value = hasLatex;
+    }
   } catch (error) {
     // Silently fail if we can't get the state
     debug.error('Failed to update toolbar state:', error);
@@ -857,6 +900,14 @@ function insertImage() {
 
 function printDocument() {
   window.print();
+}
+
+function toggleLatex() {
+  if (!crepe) return;
+  crepe.editor?.action((ctx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ctx.get(commandsCtx) as any).call('ToggleLatex');
+  });
 }
 
 function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6') {

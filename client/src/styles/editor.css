@@ -173,6 +173,10 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
 
 /* Print styles */
 @media print {
+  @page {
+    margin: 1.5cm;
+  }
+
   /* Hide all UI chrome */
   aside,
   .tab-bar,
@@ -184,82 +188,77 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
     display: none !important;
   }
 
-  /* Hide source editor in split/source view - always print WYSIWYG */
+  /* Hide source editor - always print WYSIWYG */
   .milkdown-split-editor {
     display: none !important;
   }
 
-  /* Ensure WYSIWYG pane is visible and full width in print */
-  .split-editor {
-    display: block !important;
-  }
-
-  .split-editor > .milkdown {
-    display: block !important;
-  }
-
-  /* Remove viewport constraints */
-  html, body, #app {
+  /* Reset viewport to plain white page */
+  html, body {
     height: auto !important;
-    width: auto !important;
     overflow: visible !important;
+    background: white !important;
+    color: black !important;
   }
 
-  /* Remove all flex/overflow constraints */
+  /* Flatten the full container chain to simple block flow.
+     Chain: #app > MainLayout div > main > MainPanel wrapper
+            > EditorContainer root > .editor-wrap > .milkdown > .split-editor
+     Without this, flex containers with height/overflow constraints survive into print. */
+  #app,
   #app > div,
-  #app > div > div,
   main,
   main > div,
+  main > div > div,
   .editor-wrap,
-  .editor-wrap > div {
-    height: auto !important;
-    overflow: visible !important;
+  .editor-wrap > div,
+  .milkdown,
+  .split-editor {
     display: block !important;
-  }
-
-  /* Let ProseMirror content flow naturally */
-  .editor-wrap .ProseMirror {
-    overflow: visible !important;
     height: auto !important;
-  }
-
-  /* Print-friendly typography - force white background on containers */
-  html,
-  body,
-  #app,
-  main {
+    width: 100% !important;
+    overflow: visible !important;
+    flex: none !important;
+    min-height: 0 !important;
     background: white !important;
-    background-color: white !important;
-    color: black !important;
   }
 
-  .editor-wrap,
-  .editor-wrap > div,
+  /* ProseMirror: strip all padding so @page margins are the sole whitespace */
+  .milkdown .ProseMirror,
   .editor-wrap .ProseMirror {
-    background: white !important;
-    background-color: white !important;
-    color: black !important;
-  }
-
-  /* Reset text color for paragraphs and common elements */
-  p, span, div, li, td, th {
-    color: black !important;
-  }
-
-  /* Remove borders/outlines */
-  .editor-wrap,
-  .editor-wrap > div,
-  .editor-wrap .ProseMirror {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
-    padding: 0 !important;
+    background: white !important;
+    color: black !important;
   }
 
-  /* Force print backgrounds */
-  .editor-wrap * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  /* Explicit print typography - must match Milkdown's compiled selector specificity
+     (.milkdown .ProseMirror element = 0-2-1) so !important wins over its px values */
+  .editor-wrap .ProseMirror p,
+  .editor-wrap .ProseMirror li,
+  .editor-wrap .ProseMirror td,
+  .editor-wrap .ProseMirror th,
+  .editor-wrap .ProseMirror blockquote { font-size: 11pt !important; line-height: 1.6 !important; }
+  .editor-wrap .ProseMirror h1 { font-size: 24pt !important; line-height: 1.2 !important; }
+  .editor-wrap .ProseMirror h2 { font-size: 20pt !important; line-height: 1.2 !important; }
+  .editor-wrap .ProseMirror h3 { font-size: 16pt !important; line-height: 1.3 !important; }
+  .editor-wrap .ProseMirror h4 { font-size: 13pt !important; line-height: 1.3 !important; }
+  .editor-wrap .ProseMirror h5 { font-size: 11pt !important; line-height: 1.4 !important; }
+  .editor-wrap .ProseMirror h6 { font-size: 10pt !important; line-height: 1.4 !important; }
+
+  /* General text */
+  .editor-wrap p,
+  .editor-wrap li,
+  .editor-wrap span,
+  .editor-wrap div {
+    color: black !important;
   }
 
   /* Headings */
@@ -279,118 +278,76 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
     text-decoration: underline !important;
   }
 
-  /* Code blocks - print friendly */
-  .editor-wrap pre,
-  .editor-wrap .cm-editor,
-  .editor-wrap .code-block,
-  .editor-wrap .cm-wrap,
-  .editor-wrap .cm-scroller,
-  .editor-wrap .cm-content,
-  .editor-wrap .cm-line,
-  .editor-wrap [data-node-type="code_block"],
-  .editor-wrap [data-node-type="code_block"] *,
-  .editor-wrap .ProseMirror pre,
-  .editor-wrap .ProseMirror .code-block,
-  .editor-wrap .milkdown-menu-wrapper {
-    background: #f5f5f5 !important;
-    background-color: #f5f5f5 !important;
-    border-color: #cccccc !important;
-    color: #000000 !important;
-  }
-
+  /* Code blocks */
   .editor-wrap pre,
   .editor-wrap .cm-editor {
-    border: 1px solid #cccccc !important;
+    background: #f5f5f5 !important;
+    border: 1px solid #ccc !important;
     border-radius: 4px !important;
     padding: 12px !important;
+    font-size: 9pt !important;
     page-break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Clear child backgrounds so only the container gets the tint */
+  .editor-wrap pre *,
+  .editor-wrap .cm-editor * {
+    background: transparent !important;
   }
 
   /* Inline code */
   .editor-wrap code {
     background: #f5f5f5 !important;
-    color: #000000 !important;
-    padding: 2px 4px !important;
+    color: black !important;
+    padding: 1px 4px !important;
     border-radius: 3px !important;
     border: 1px solid #e0e0e0 !important;
+    font-size: 9pt !important;
   }
 
-  /* Code inside pre blocks */
   .editor-wrap pre code {
     background: transparent !important;
     border: none !important;
     padding: 0 !important;
   }
 
-  /* Override all code block backgrounds and nested elements */
-  .editor-wrap pre,
-  .editor-wrap pre *,
-  .editor-wrap .cm-editor,
-  .editor-wrap .cm-editor *,
-  .editor-wrap .code-block,
-  .editor-wrap .code-block *,
-  .editor-wrap [class*="cm-"],
-  .editor-wrap [class*="code"] {
-    background: transparent !important;
-    background-color: transparent !important;
-  }
-
-  /* Apply light background only to main containers */
-  .editor-wrap pre,
-  .editor-wrap .cm-editor {
-    background: #f5f5f5 !important;
-    background-color: #f5f5f5 !important;
-  }
-
-  /* Subtle syntax highlighting for readability */
-  .editor-wrap .cm-keyword,
-  .editor-wrap .token.keyword {
-    color: #0000cc !important;
-    font-weight: bold !important;
-  }
-
-  .editor-wrap .cm-string,
-  .editor-wrap .token.string {
-    color: #008800 !important;
-  }
-
-  .editor-wrap .cm-comment,
-  .editor-wrap .token.comment {
-    color: #666666 !important;
-    font-style: italic !important;
-  }
-
-  .editor-wrap .cm-number,
-  .editor-wrap .token.number {
-    color: #cc0000 !important;
-  }
-
-  .editor-wrap .cm-function,
-  .editor-wrap .token.function {
-    color: #0066cc !important;
-  }
+  /* Syntax highlighting */
+  .editor-wrap .cm-keyword  { color: #0000cc !important; font-weight: bold !important; }
+  .editor-wrap .cm-string   { color: #008800 !important; }
+  .editor-wrap .cm-comment  { color: #666 !important; font-style: italic !important; }
+  .editor-wrap .cm-number   { color: #cc0000 !important; }
+  .editor-wrap .cm-function { color: #0066cc !important; }
 
   /* Blockquotes */
   .editor-wrap blockquote {
-    border-left-color: #999 !important;
+    border-left: 3px solid #999 !important;
+    margin-left: 0 !important;
+    padding-left: 1em !important;
     color: #333 !important;
   }
 
   /* Tables */
   .editor-wrap table {
     border-collapse: collapse !important;
+    width: 100% !important;
   }
 
   .editor-wrap th {
     background: #e8e8e8 !important;
-    color: #1a1a1a !important;
+    color: black !important;
     font-weight: 600 !important;
     border: 1px solid #aaa !important;
+    padding: 4px 8px !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   .editor-wrap td {
     border: 1px solid #aaa !important;
     color: black !important;
+    padding: 4px 8px !important;
   }
 
   /* Images */
@@ -415,6 +372,7 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   grid-template-rows: 1fr;
   gap: 1px;
   width: 100%;
+  height: 100%;
 }
 
 /* Individual editor panes.

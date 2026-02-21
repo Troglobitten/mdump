@@ -17,6 +17,7 @@
     "@milkdown/preset-commonmark": "^7.5.1",
     "@milkdown/preset-gfm": "^7.5.1",
     "@milkdown/utils": "^7.18.0",
+    "katex": "^0.16.28",
     "lucide-vue-next": "^0.344.0",
     "prosemirror-commands": "^1.7.1",
     "unist-util-visit": "^5.1.0",

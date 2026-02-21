@@ -175,12 +175,13 @@ export const DEFAULT_TOOLBAR_CONFIG: ToolbarConfig = {
     { id: 'superscript', visible: true, order: 8 },
     { id: 'subscript', visible: true, order: 9 },
     { id: 'marker', visible: true, order: 10 },
-    { id: 'divider-3', visible: true, order: 11 },
-    { id: 'image', visible: true, order: 12 },
-    { id: 'code-block', visible: true, order: 13 },
-    { id: 'blockquote', visible: true, order: 14 },
-    { id: 'horizontal-rule', visible: true, order: 15 },
-    { id: 'print', visible: true, order: 16 },
+    { id: 'latex', visible: true, order: 11 },
+    { id: 'divider-3', visible: true, order: 12 },
+    { id: 'image', visible: true, order: 13 },
+    { id: 'code-block', visible: true, order: 14 },
+    { id: 'blockquote', visible: true, order: 15 },
+    { id: 'horizontal-rule', visible: true, order: 16 },
+    { id: 'print', visible: true, order: 17 },
   ]
 };
 
