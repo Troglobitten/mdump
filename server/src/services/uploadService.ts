@@ -4,7 +4,7 @@ import { join, basename, extname } from 'path';
 import { lookup } from 'mime-types';
 import sharp from 'sharp';
 import type { UploadResult, AttachmentInfo } from '@mdump/shared';
-import { MAX_UPLOAD_SIZE, ALLOWED_UPLOAD_TYPES, MAX_IMAGE_DIMENSION, RESIZABLE_TYPES } from '../config/constants.js';
+import { MAX_UPLOAD_SIZE, MAX_IMAGE_DIMENSION, RESIZABLE_TYPES } from '../config/constants.js';
 import { sandboxPath, getAttachmentFolder, getRelativePath } from '../utils/paths.js';
 import { sanitizeFilename, generateUniqueFilename } from '../utils/filename.js';
 
@@ -20,11 +20,8 @@ export async function saveUpload(
     throw new Error(`File size exceeds maximum of ${MAX_UPLOAD_SIZE / 1024 / 1024}MB`);
   }
 
-  // Validate file type
+  // Determine MIME type (no allowlist — accept any file type)
   const mimeType = file.mimetype || lookup(file.originalname) || 'application/octet-stream';
-  if (!ALLOWED_UPLOAD_TYPES.includes(mimeType)) {
-    throw new Error(`File type ${mimeType} is not allowed`);
-  }
 
   // Get the full path of the note
   const noteFullPath = sandboxPath(notePath);

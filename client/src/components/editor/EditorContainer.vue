@@ -9,7 +9,7 @@ import { toggleMark } from 'prosemirror-commands';
 import { lift } from 'prosemirror-commands';
 import type { Editor } from '@milkdown/core';
 import { visit } from 'unist-util-visit';
-import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, ChevronLeft, ChevronRight, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2, Sigma } from 'lucide-vue-next';
+import { Bold, Italic, Strikethrough, Code, Quote, Minus, Type, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, ChevronDown, ChevronLeft, ChevronRight, List, ListOrdered, ListTodo, Superscript, Subscript, Highlighter, Link, Image, Printer, Columns2, Sigma, Paperclip } from 'lucide-vue-next';
 import { splitEditing, splitEditingOptionsCtx } from '@milkdown-lab/plugin-split-editing';
 import { useFiles } from '@/composables/useFiles';
 import { useTabs } from '@/composables/useTabs';
@@ -286,6 +286,7 @@ const saving = ref(false);
 const content = ref('');
 const lastSavedContent = ref('');
 const editorEl = ref<HTMLDivElement | null>(null);
+const fileUploadInput = ref<HTMLInputElement | null>(null);
 const attachmentBarRef = ref<InstanceType<typeof AttachmentBar> | null>(null);
 const linkModalOpen = ref(false);
 const linkUrl = ref('');
@@ -376,6 +377,7 @@ const TOOLBAR_BUTTON_DEFINITIONS: ToolbarButtonDefinition[] = [
   { id: 'subscript', type: 'button', buttonType: 'custom', action: 'subscript', icon: Subscript, title: 'Subscript' },
   { id: 'marker', type: 'button', buttonType: 'custom', action: 'marker', icon: Highlighter, title: 'Highlight' },
   { id: 'latex', type: 'button', buttonType: 'insert', action: 'toggleLatex', icon: Sigma, title: 'LaTeX Formula' },
+  { id: 'file-upload', type: 'button', buttonType: 'insert', action: 'uploadFileAttachment', icon: Paperclip, title: 'Upload File' },
   { id: 'image', type: 'button', buttonType: 'insert', action: 'insertImage', icon: Image, title: 'Insert Image' },
   { id: 'code-block', type: 'button', buttonType: 'block', action: 'toggleCodeBlock', icon: Code, title: 'Code Block' },
   { id: 'blockquote', type: 'button', buttonType: 'block', action: 'toggleBlockquote', icon: Quote, title: 'Quote' },
@@ -398,6 +400,7 @@ function handleToolbarAction(action: string) {
     toggleBlockquote,
     insertHorizontalRule,
     insertImage,
+    uploadFileAttachment,
     printDocument,
     toggleLatex,
   };
@@ -910,6 +913,40 @@ function toggleLatex() {
   });
 }
 
+function uploadFileAttachment() {
+  fileUploadInput.value?.click();
+}
+
+async function handleFileAttachment(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !crepe) return;
+
+  try {
+    const result = await uploadApi.upload(props.filePath, file);
+    insertFileLink(file.name, result.url);
+    attachmentBarRef.value?.loadAttachments();
+  } catch (error) {
+    debug.error('File upload failed:', error);
+    toast.error('Failed to upload file');
+  } finally {
+    input.value = '';
+  }
+}
+
+function insertFileLink(filename: string, url: string) {
+  if (!crepe) return;
+  crepe.editor?.action((ctx) => {
+    const view = ctx.get(editorViewCtx);
+    const { state } = view;
+    const linkMark = state.schema.marks.link;
+    if (!linkMark) return;
+    const mark = linkMark.create({ href: url });
+    const textNode = state.schema.text(filename, [mark]);
+    view.dispatch(state.tr.replaceSelectionWith(textNode, false));
+  });
+}
+
 function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6') {
   if (!crepe) return;
 
@@ -1376,6 +1413,9 @@ watch(externalReloadPath, (path) => {
         </div>
       </div>
     </div>
+
+    <!-- Hidden file input for file attachment uploads -->
+    <input ref="fileUploadInput" type="file" class="hidden" @change="handleFileAttachment" />
 
     <!-- Editor -->
     <div v-if="!loading" ref="editorEl" class="editor-wrap flex-1 min-h-0"></div>
