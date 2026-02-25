@@ -2,83 +2,110 @@
 
 A self-hosted, web-based markdown note-taking app. Notes are stored as plain `.md` files on disk — no database, no lock-in. Runs as a single Docker container.
 
+## Features
+
+- **WYSIWYG editor** powered by Milkdown Crepe (ProseMirror + Remark)
+- **Flat-file storage** — notes are standard `.md` files, editable by any text editor
+- **Multiple tabs** with auto-save and dirty state tracking
+- **Full-text search** across all notes
+- **Document outline panel** — clickable h1–h6 heading list in the sidebar
+- **File attachments** — upload images and files alongside notes
+- **Split editing** — WYSIWYG, source, or side-by-side view
+- **Customisable toolbar** — reorder, show/hide buttons
+- **Theming** — 33 DaisyUI themes, custom editor fonts, font size, spacing
+- **HTTPS** — native TLS support without a reverse proxy
+- **Single-user auth** with bcrypt-hashed password
+
 ## Quick Start
 
 ```bash
-git clone https://github.com/yourusername/mdump.git
-cd mdump
-
-# Start with Docker Compose
-SESSION_SECRET=$(openssl rand -base64 32) docker-compose -f docker/docker-compose.yml up -d
+docker run -d \
+  --name mdump \
+  -p 8080:8080 \
+  -e SESSION_SECRET=$(openssl rand -base64 32) \
+  -v mdump-notes:/data/notes \
+  -v mdump-config:/data/config \
+  ghcr.io/troglobitten/mdump:main
 ```
 
 Open `http://localhost:8080` and create your account on first run.
 
-Your notes live in a Docker volume at `/data/notes` and can be edited with any text editor.
+### Docker Compose
+
+```yaml
+services:
+  mdump:
+    image: ghcr.io/troglobitten/mdump:main
+    ports:
+      - "8080:8080"
+    volumes:
+      - mdump-notes:/data/notes
+      - mdump-config:/data/config
+    environment:
+      - SESSION_SECRET=your-secret-here
+    restart: unless-stopped
+
+volumes:
+  mdump-notes:
+  mdump-config:
+```
+
+## Data
+
+Notes and config are stored in two Docker volumes:
+
+| Volume | Container path | Contents |
+|--------|---------------|----------|
+| `mdump-notes` | `/data/notes` | Markdown files and attachments |
+| `mdump-config` | `/data/config` | Settings, sessions, auth |
+
+Attachments live in hidden `.{notename}/` folders alongside each note (e.g. `meeting-notes.md` → `.meeting-notes/`).
 
 ## HTTPS / TLS
 
-mdump supports native HTTPS without a reverse proxy. To enable it, provide paths to your TLS certificate and key via environment variables:
+mdump supports native HTTPS without a reverse proxy. Set both variables to enable it:
 
 | Variable | Description |
 |----------|-------------|
 | `TLS_CERT` | Path to the TLS certificate file (inside the container) |
 | `TLS_KEY` | Path to the TLS private key file (inside the container) |
 
-When both are set, the server starts in HTTPS mode. When either is missing, it runs plain HTTP (the default).
-
-### Docker Compose example with HTTPS
-
 ```yaml
-services:
-  mdump:
-    image: ghcr.io/yourusername/mdump:latest
-    ports:
-      - "8443:8080"
     volumes:
-      - mdump-notes:/data/notes
-      - mdump-config:/data/config
-      - mdump-cache:/data/.image-cache
       - /path/to/certs:/data/certs:ro
     environment:
-      - SESSION_SECRET=your-secret-here
       - TLS_CERT=/data/certs/cert.pem
       - TLS_KEY=/data/certs/key.pem
 ```
 
-### Startup logs
-
-- **HTTP mode** (default): `Server running on http://localhost:8080`
-- **HTTPS mode**: `Server running on https://localhost:8080 (TLS enabled)`
-- **Invalid cert/key**: Error logged (e.g. `TLS certificate not found or not readable at: /data/certs/cert.pem`), falls back to HTTP with a warning
-
-### Self-signed certificates
-
-For local testing, you can generate a self-signed certificate:
+For a self-signed cert (local testing):
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
 ```
 
-Your browser will show a security warning for self-signed certs — this is expected.
-
 ## Development
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev        # runs client (port 5173) and server (port 8080) concurrently
+```
+
+```bash
+pnpm --filter client build   # production client build
+pnpm --filter server build   # production server build
 ```
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express, TypeScript
-- **Frontend**: Vue 3, Vite, Tailwind CSS, DaisyUI
-- **Editor**: Wysimark (WYSIWYG markdown)
-- **Package Manager**: pnpm (monorepo)
+- **Backend**: Node.js 20, Express 4, TypeScript
+- **Frontend**: Vue 3 (Composition API), Vite, Tailwind CSS 3, DaisyUI 4
+- **Editor**: Milkdown Crepe 7 (ProseMirror + Remark)
+- **Package manager**: pnpm (monorepo)
 
 ## Disclaimer
 
-This project was built with the help of [Claude](https://claude.ai) (Anthropic). Code quality is not guaranteed. Use at your own risk.
+Built with the help of [Claude](https://claude.ai) (Anthropic). Use at your own risk.
 
 ## License
 
