@@ -366,31 +366,40 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
    Split Editing Plugin Styles
    ======================================== */
 
-/* Split editor wrapper - grid layout (columns set dynamically by JS) */
+/* Split editor wrapper - grid layout (columns set dynamically by JS).
+   In non-split modes, height is auto so content flows naturally and the
+   parent .milkdown scrolls. In split mode, height: 100% constrains both
+   panes so each scrolls independently. */
 .split-editor {
   display: grid;
   grid-template-rows: 1fr;
   gap: 1px;
   width: 100%;
+}
+
+.split-editor[data-view-mode="split"] {
   height: 100%;
 }
 
 /* Individual editor panes.
-   Both need overflow:auto + min-width/height:0 so CSS grid can constrain
-   them to their 1fr allocation. Without this, min-width:auto (default) lets
-   wide content (code blocks, tables) expand the WYSIWYG pane beyond 1fr. */
+   In split mode, both need overflow:auto + min-width/height:0 so CSS grid
+   can constrain them to their 1fr allocation. */
 .milkdown-split-editor {
   overflow: auto;
   min-height: 0;
   min-width: 0;
 }
 
-/* The WYSIWYG pane is .ProseMirror, a direct child of .split-editor.
-   (.milkdown is the PARENT of .split-editor, not a child — previous selector was wrong.) */
+/* The WYSIWYG pane (.ProseMirror) must NOT be a scroll container in
+   non-split modes — prosemirror-virtual-cursor uses position:absolute
+   with viewport-relative coords, which breaks when .ProseMirror scrolls. */
 .split-editor > .ProseMirror {
-  overflow: auto;
   min-height: 0;
   min-width: 0;
+}
+
+.split-editor[data-view-mode="split"] > .ProseMirror {
+  overflow: auto;
 }
 
 /* User preferences - dynamic values via CSS variables */
