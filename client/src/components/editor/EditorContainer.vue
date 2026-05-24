@@ -295,8 +295,12 @@ const linkModalOpen = ref(false);
 const linkUrl = ref('');
 const linkTitle = ref('');
 const blockStyleDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
+const blockStyleMenuRef = ref<HTMLDivElement | null>(null);
 const listDropdownRef = ref<HTMLDivElement | HTMLDivElement[] | null>(null);
+const listMenuRef = ref<HTMLDivElement | null>(null);
 const viewModeDropdownRef = ref<HTMLDivElement | null>(null);
+const blockDropdownPos = ref({ top: '0px', left: '0px' });
+const listDropdownPos = ref({ top: '0px', left: '0px' });
 
 // Toolbar scroll state
 const toolbarScrollContainer = ref<HTMLDivElement | null>(null);
@@ -337,6 +341,35 @@ const currentBlockType = ref<'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h
 const blockStyleDropdownOpen = ref(false);
 const currentListType = ref<'none' | 'bullet' | 'ordered' | 'task'>('none');
 const listDropdownOpen = ref(false);
+
+function getDropdownRef(refValue: HTMLDivElement | HTMLDivElement[] | null): HTMLDivElement | null {
+  if (Array.isArray(refValue)) return refValue[0] ?? null;
+  return refValue;
+}
+
+function toggleBlockDropdown() {
+  if (!blockStyleDropdownOpen.value) {
+    const el = getDropdownRef(blockStyleDropdownRef.value);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      blockDropdownPos.value = { top: `${rect.bottom + 4}px`, left: `${rect.left}px` };
+    }
+  }
+  blockStyleDropdownOpen.value = !blockStyleDropdownOpen.value;
+  listDropdownOpen.value = false;
+}
+
+function toggleListDropdown() {
+  if (!listDropdownOpen.value) {
+    const el = getDropdownRef(listDropdownRef.value);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      listDropdownPos.value = { top: `${rect.bottom + 4}px`, left: `${rect.left}px` };
+    }
+  }
+  listDropdownOpen.value = !listDropdownOpen.value;
+  blockStyleDropdownOpen.value = false;
+}
 
 // Split editing view mode: 'wysiwyg' (default), 'split', or 'source'
 // Load from localStorage or default to 'wysiwyg'
@@ -973,6 +1006,8 @@ function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6
   if (!crepe) return;
 
   crepe.editor?.action((ctx) => {
+    const view = ctx.get(editorViewCtx);
+    view.focus();
     const commandManager = ctx.get(commandsCtx);
 
     if (type === 'paragraph') {
@@ -1059,6 +1094,7 @@ function toggleList(type: 'bullet' | 'ordered' | 'task') {
   crepe.editor?.action((ctx) => {
     const commandManager = ctx.get(commandsCtx);
     const view = ctx.get(editorViewCtx);
+    view.focus();
 
     // Handle task list separately as it requires attribute manipulation
     if (type === 'task') {
@@ -1182,24 +1218,26 @@ let unsubscribeShortcut: (() => void) | null = null;
 
 // Close dropdown when clicking outside
 function handleClickOutside(event: MouseEvent) {
-  // Handle blockStyleDropdownRef (may be array due to v-for)
-  const blockDropdown = Array.isArray(blockStyleDropdownRef.value)
-    ? blockStyleDropdownRef.value[0]
-    : blockStyleDropdownRef.value;
-  if (blockDropdown && !blockDropdown.contains(event.target as Node)) {
-    blockStyleDropdownOpen.value = false;
+  const target = event.target as Node;
+
+  // Block style dropdown: check both toggle button and teleported menu
+  if (blockStyleDropdownOpen.value) {
+    const blockToggle = getDropdownRef(blockStyleDropdownRef.value);
+    const inToggle = blockToggle?.contains(target);
+    const inMenu = blockStyleMenuRef.value?.contains(target);
+    if (!inToggle && !inMenu) blockStyleDropdownOpen.value = false;
   }
 
-  // Handle listDropdownRef (may be array due to v-for)
-  const listDropdown = Array.isArray(listDropdownRef.value)
-    ? listDropdownRef.value[0]
-    : listDropdownRef.value;
-  if (listDropdown && !listDropdown.contains(event.target as Node)) {
-    listDropdownOpen.value = false;
+  // List dropdown: check both toggle button and teleported menu
+  if (listDropdownOpen.value) {
+    const listToggle = getDropdownRef(listDropdownRef.value);
+    const inToggle = listToggle?.contains(target);
+    const inMenu = listMenuRef.value?.contains(target);
+    if (!inToggle && !inMenu) listDropdownOpen.value = false;
   }
 
-  // Handle viewModeDropdownRef
-  if (viewModeDropdownRef.value && !viewModeDropdownRef.value.contains(event.target as Node)) {
+  // View mode dropdown
+  if (viewModeDropdownRef.value && !viewModeDropdownRef.value.contains(target)) {
     viewModeDropdownOpen.value = false;
   }
 }
@@ -1313,71 +1351,33 @@ watch(externalReloadPath, (path) => {
         <!-- Divider -->
         <div v-if="item.type === 'divider'" class="w-px h-5 bg-base-300 mx-1"></div>
 
-        <!-- Block Style Dropdown -->
-        <div v-else-if="item.type === 'dropdown' && item.dropdownType === 'block-style'" ref="blockStyleDropdownRef" class="relative">
+        <!-- Block Style Dropdown (toggle only — menu is teleported) -->
+        <div v-else-if="item.type === 'dropdown' && item.dropdownType === 'block-style'" ref="blockStyleDropdownRef">
           <button
             type="button"
             class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
             @mousedown.prevent
-            @click="blockStyleDropdownOpen = !blockStyleDropdownOpen"
+            @click="toggleBlockDropdown"
             title="Text style"
           >
             <component :is="blockTypeIcons[currentBlockType]" :size="16" />
             <ChevronDown :size="12" />
           </button>
-
-          <!-- Dropdown menu -->
-          <div
-            v-if="blockStyleDropdownOpen"
-            class="absolute top-full left-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[160px]"
-            @mousedown.prevent
-          >
-            <button
-              v-for="type in ['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']"
-              :key="type"
-              type="button"
-              class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
-              :class="{ 'bg-base-200 text-primary': currentBlockType === type }"
-              @click="setBlockType(type as any)"
-            >
-              <component :is="blockTypeIcons[type as keyof typeof blockTypeIcons]" :size="16" />
-              <span>{{ blockTypeLabels[type as keyof typeof blockTypeLabels] }}</span>
-            </button>
-          </div>
         </div>
 
-        <!-- List Dropdown -->
-        <div v-else-if="item.type === 'dropdown' && item.dropdownType === 'list'" ref="listDropdownRef" class="relative">
+        <!-- List Dropdown (toggle only — menu is teleported) -->
+        <div v-else-if="item.type === 'dropdown' && item.dropdownType === 'list'" ref="listDropdownRef">
           <button
             type="button"
             class="flex items-center gap-1 h-8 px-2 border-0 rounded bg-transparent text-base-content/60 cursor-pointer transition-colors duration-200 hover:bg-primary/20"
             :class="{ 'bg-base-300 text-primary': currentListType !== 'none' }"
             @mousedown.prevent
-            @click="listDropdownOpen = !listDropdownOpen"
+            @click="toggleListDropdown"
             title="List"
           >
             <component :is="listTypeIcons[currentListType]" :size="16" />
             <ChevronDown :size="12" />
           </button>
-
-          <!-- Dropdown menu -->
-          <div
-            v-if="listDropdownOpen"
-            class="absolute top-full left-0 mt-1 py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg z-50 min-w-[160px]"
-            @mousedown.prevent
-          >
-            <button
-              v-for="type in ['bullet', 'ordered', 'task']"
-              :key="type"
-              type="button"
-              class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
-              :class="{ 'bg-base-200 text-primary': currentListType === type }"
-              @click="toggleList(type as any)"
-            >
-              <component :is="listTypeIcons[type as keyof typeof listTypeIcons]" :size="16" />
-              <span>{{ listTypeLabels[type as keyof typeof listTypeLabels] }}</span>
-            </button>
-          </div>
         </div>
 
         <!-- Regular Button -->
@@ -1445,6 +1445,52 @@ watch(externalReloadPath, (path) => {
     <!-- Editor -->
     <div v-if="!loading" ref="editorEl" class="editor-wrap flex-1 min-h-0"></div>
 
+    <!-- Teleported dropdown menus (escape overflow:hidden on toolbar scroll container) -->
+    <Teleport to="body">
+      <div
+        v-if="blockStyleDropdownOpen"
+        ref="blockStyleMenuRef"
+        class="fixed py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg min-w-[160px]"
+        :style="{ top: blockDropdownPos.top, left: blockDropdownPos.left, zIndex: 9999 }"
+        @mousedown.prevent
+      >
+        <button
+          v-for="type in ['paragraph', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']"
+          :key="type"
+          type="button"
+          class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
+          :class="{ 'bg-base-200 text-primary': currentBlockType === type }"
+          @mousedown.prevent
+          @click="setBlockType(type as any)"
+        >
+          <component :is="blockTypeIcons[type as keyof typeof blockTypeIcons]" :size="16" />
+          <span>{{ blockTypeLabels[type as keyof typeof blockTypeLabels] }}</span>
+        </button>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="listDropdownOpen"
+        ref="listMenuRef"
+        class="fixed py-1 bg-base-100 border border-base-300 rounded-lg shadow-lg min-w-[160px]"
+        :style="{ top: listDropdownPos.top, left: listDropdownPos.left, zIndex: 9999 }"
+        @mousedown.prevent
+      >
+        <button
+          v-for="type in ['bullet', 'ordered', 'task']"
+          :key="type"
+          type="button"
+          class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
+          :class="{ 'bg-base-200 text-primary': currentListType === type }"
+          @mousedown.prevent
+          @click="toggleList(type as any)"
+        >
+          <component :is="listTypeIcons[type as keyof typeof listTypeIcons]" :size="16" />
+          <span>{{ listTypeLabels[type as keyof typeof listTypeLabels] }}</span>
+        </button>
+      </div>
+    </Teleport>
 
     <!-- Link modal -->
     <div v-if="linkModalOpen" class="modal modal-open" @click.self="cancelLink">
