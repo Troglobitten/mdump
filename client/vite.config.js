@@ -25,7 +25,8 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        sourcemap: true,
+        // No source maps in the production bundle (smaller image, no source exposure).
+        sourcemap: false,
         rollupOptions: {
             output: {
                 manualChunks: {

@@ -34,9 +34,13 @@ coverage/
 docker/
 Dockerfile*
 docker-compose*
+# ...except the entrypoint script, which the image needs
+!docker/entrypoint.sh
 
-# Data (mounted as volume)
-data/
+# Data (mounted as volume) — match at any depth (e.g. server/data), not just root
+**/data/
+**/.search-index.json
+**/.image-cache/
 
 # OS files
 .DS_Store
