@@ -35,7 +35,15 @@ async function ensureConfigDir(): Promise<void> {
  */
 function tryParseSettings(content: string): AppSettings | null {
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(content) };
+    const parsed = JSON.parse(content);
+    // Deep-merge the nested objects so new default keys (e.g. a preference
+    // added in a later release) are present even when loading an older file.
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      auth: { ...DEFAULT_SETTINGS.auth, ...(parsed.auth ?? {}) },
+      preferences: { ...DEFAULT_PREFERENCES, ...(parsed.preferences ?? {}) },
+    };
   } catch {
     return null;
   }
@@ -127,11 +135,4 @@ export async function getPreferences(): Promise<UserPreferences> {
 export async function isSetupComplete(): Promise<boolean> {
   const settings = await loadSettings();
   return settings.setupComplete;
-}
-
-/**
- * Clear the settings cache (useful for testing)
- */
-export function clearSettingsCache(): void {
-  cachedSettings = null;
 }

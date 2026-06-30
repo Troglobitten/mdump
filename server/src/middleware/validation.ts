@@ -44,27 +44,6 @@ export function validateQuery<T extends ZodSchema>(
   };
 }
 
-/**
- * Create a validation middleware for URL parameters
- */
-export function validateParams<T extends ZodSchema>(
-  schema: T
-): (req: Request, res: Response, next: NextFunction) => void {
-  return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      req.params = schema.parse(req.params);
-      next();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const message = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
-        sendError(res, `Validation error: ${message}`);
-      } else {
-        sendError(res, 'Validation error');
-      }
-    }
-  };
-}
-
 // Common validation schemas
 export const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),

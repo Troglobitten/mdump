@@ -82,11 +82,3 @@ export async function changePassword(
 
   return true;
 }
-
-/**
- * Get the current username
- */
-export async function getUsername(): Promise<string | null> {
-  const settings = await loadSettings();
-  return settings.setupComplete ? settings.auth.username : null;
-}

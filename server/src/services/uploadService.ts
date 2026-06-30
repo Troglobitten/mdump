@@ -143,11 +143,3 @@ export async function listAttachments(notePath: string): Promise<AttachmentInfo[
   }
   return attachments;
 }
-
-/**
- * Get the full path to an attachment folder for a note
- */
-export function getAttachmentFolderPath(notePath: string): string {
-  const noteFullPath = sandboxPath(notePath);
-  return getAttachmentFolder(noteFullPath);
-}

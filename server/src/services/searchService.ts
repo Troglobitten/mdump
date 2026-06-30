@@ -157,13 +157,6 @@ export async function removeFromIndex(relativePath: string): Promise<void> {
 }
 
 /**
- * Update a file in the index
- */
-export async function updateIndex(relativePath: string): Promise<void> {
-  await indexFile(relativePath);
-}
-
-/**
  * Save the search index to disk
  */
 export async function saveIndex(): Promise<void> {

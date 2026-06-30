@@ -42,7 +42,9 @@ services:
       - mdump-notes:/data/notes
       - mdump-config:/data/config
     environment:
-      - SESSION_SECRET=your-secret-here
+      # Optional: provide your own secret. If unset, mdump generates a random
+      # one and persists it under /data/config on first run.
+      - SESSION_SECRET=${SESSION_SECRET:-}
     restart: unless-stopped
 
 volumes:
@@ -52,14 +54,35 @@ volumes:
 
 ## Data
 
-Notes and config are stored in two Docker volumes:
+Everything lives under `/data`:
 
-| Volume | Container path | Contents |
-|--------|---------------|----------|
-| `mdump-notes` | `/data/notes` | Markdown files and attachments |
-| `mdump-config` | `/data/config` | Settings, sessions, auth |
+| Path | Persist? | Contents |
+|------|----------|----------|
+| `/data/notes` | **Yes** | Markdown files and attachments |
+| `/data/config` | **Yes** | Settings, sessions, auth, generated session secret |
+| `/data/.image-cache` | Optional | Resized-image cache (regenerated on demand; safe to discard) |
+
+Mount volumes for `notes` and `config` (the examples above do). The image cache
+is ephemeral — give it a volume only if you want resized thumbnails to survive
+restarts. The search index (`/data/.search-index.json`) is also regenerated
+automatically.
 
 Attachments live in hidden `.{notename}/` folders alongside each note (e.g. `meeting-notes.md` → `.meeting-notes/`).
+
+## Backup & restore
+
+To back up, stop the container and copy the **`notes`** and **`config`**
+volumes (config holds your credentials and session secret). The image cache and
+search index can be ignored — they rebuild automatically.
+
+```bash
+docker run --rm \
+  -v mdump-notes:/notes -v mdump-config:/config \
+  -v "$(pwd):/backup" alpine \
+  tar czf /backup/mdump-backup.tar.gz -C / notes config
+```
+
+Restore by extracting the archive back into the same two volumes.
 
 ## HTTPS / TLS
 
@@ -83,6 +106,14 @@ For a self-signed cert (local testing):
 ```bash
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
 ```
+
+### Behind a reverse proxy
+
+If you terminate TLS at a reverse proxy (nginx, Caddy, Traefik, …) instead of
+using the built-in TLS, set `TRUST_PROXY=1` so secure cookies and per-client
+rate limiting work correctly. Make sure the proxy forwards WebSocket upgrades
+for `/ws` (e.g. nginx `proxy_set_header Upgrade $http_upgrade;` and
+`proxy_set_header Connection "upgrade";`).
 
 ## Development
 

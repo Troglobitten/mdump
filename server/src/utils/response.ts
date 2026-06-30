@@ -39,22 +39,8 @@ export function sendUnauthorized(res: Response, message = 'Unauthorized'): void 
 }
 
 /**
- * Send a forbidden response
- */
-export function sendForbidden(res: Response, message = 'Forbidden'): void {
-  sendError(res, message, 403);
-}
-
-/**
  * Send a server error response
  */
 export function sendServerError(res: Response, message = 'Internal server error'): void {
   sendError(res, message, 500);
-}
-
-/**
- * Send a conflict response (e.g., resource already exists)
- */
-export function sendConflict(res: Response, message = 'Resource already exists'): void {
-  sendError(res, message, 409);
 }

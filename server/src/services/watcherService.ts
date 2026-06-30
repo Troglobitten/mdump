@@ -135,10 +135,3 @@ export async function closeWatcher(): Promise<void> {
 
   console.log('File watcher closed');
 }
-
-/**
- * Get the number of connected clients
- */
-export function getClientCount(): number {
-  return clients.size;
-}

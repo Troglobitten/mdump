@@ -22,24 +22,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 }
 
 /**
- * Middleware to check if setup is complete
- * Used to protect routes that require a configured app
- */
-export async function requireSetup(
-  _req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  const setupComplete = await isSetupComplete();
-
-  if (setupComplete) {
-    next();
-  } else {
-    sendUnauthorized(res, 'Setup has not been completed');
-  }
-}
-
-/**
  * Middleware to redirect to setup if not complete
  */
 export async function checkSetup(

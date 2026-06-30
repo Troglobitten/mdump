@@ -291,26 +291,6 @@ export async function fileExists(relativePath: string): Promise<boolean> {
 }
 
 /**
- * Get file metadata
- */
-export async function getFileMetadata(
-  relativePath: string
-): Promise<{ modifiedAt: string; size: number }> {
-  const fullPath = sandboxPath(relativePath);
-
-  if (!existsSync(fullPath)) {
-    throw new Error('File not found');
-  }
-
-  const stats = await stat(fullPath);
-
-  return {
-    modifiedAt: stats.mtime.toISOString(),
-    size: stats.size,
-  };
-}
-
-/**
  * Helper to recursively delete a directory
  */
 async function deleteDirectory(dirPath: string): Promise<void> {
