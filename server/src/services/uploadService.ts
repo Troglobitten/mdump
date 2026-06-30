@@ -4,7 +4,12 @@ import { join, basename, extname } from 'path';
 import { lookup } from 'mime-types';
 import sharp from 'sharp';
 import type { UploadResult, AttachmentInfo } from '@mdump/shared';
-import { MAX_UPLOAD_SIZE, MAX_IMAGE_DIMENSION, RESIZABLE_TYPES } from '../config/constants.js';
+import {
+  MAX_UPLOAD_SIZE,
+  MAX_IMAGE_DIMENSION,
+  RESIZABLE_TYPES,
+  MAX_INPUT_PIXELS,
+} from '../config/constants.js';
 import { sandboxPath, getAttachmentFolder, getRelativePath } from '../utils/paths.js';
 import { sanitizeFilename, generateUniqueFilename } from '../utils/filename.js';
 
@@ -63,19 +68,19 @@ export async function saveUpload(
 
   if (RESIZABLE_TYPES.includes(mimeType)) {
     try {
-      const metadata = await sharp(filePath).metadata();
+      const metadata = await sharp(filePath, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
       width = metadata.width;
       height = metadata.height;
 
       if (width && height && (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION)) {
-        const resized = await sharp(filePath)
+        const resized = await sharp(filePath, { limitInputPixels: MAX_INPUT_PIXELS })
           .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
             fit: 'inside',
             withoutEnlargement: true,
           })
           .toBuffer();
         await writeFile(filePath, resized);
-        const newMeta = await sharp(filePath).metadata();
+        const newMeta = await sharp(filePath, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
         width = newMeta.width;
         height = newMeta.height;
       }

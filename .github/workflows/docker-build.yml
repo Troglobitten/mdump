@@ -46,6 +46,15 @@ jobs:
       - name: Audit (production deps)
         run: pnpm audit --prod --audit-level=high || true
 
+      - name: Trivy vulnerability & config scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '0' # report only for now; flip to '1' to enforce
+          ignore-unfixed: true
+
   build:
     needs: verify
     runs-on: ubuntu-latest

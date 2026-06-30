@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
 import sharp from 'sharp';
-import { IMAGE_CACHE_DIR } from '../config/constants.js';
+import { IMAGE_CACHE_DIR, MAX_INPUT_PIXELS } from '../config/constants.js';
 
 /**
  * Get a resized version of an image, using disk cache
@@ -31,7 +31,7 @@ export async function getResizedImage(
   }
 
   // Resize with sharp
-  const buffer = await sharp(originalPath)
+  const buffer = await sharp(originalPath, { limitInputPixels: MAX_INPUT_PIXELS })
     .resize(w, h, { fit: 'inside', withoutEnlargement: true })
     .toBuffer();
 

@@ -67,6 +67,9 @@ export const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'imag
 export const MAX_IMAGE_DIMENSION = 2560;
 export const IMAGE_CACHE_DIR = resolve(DATA_DIR, '.image-cache');
 export const RESIZABLE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+// Reject absurdly large images before sharp decodes them, to prevent
+// memory-exhaustion ("pixel bomb") attacks. 50 MP is generous for real photos.
+export const MAX_INPUT_PIXELS = 50_000_000;
 
 // Search
 export const SEARCH_DEFAULT_LIMIT = 50;
