@@ -1,4 +1,5 @@
-import { Router, type Router as RouterType } from 'express';
+import { Router, type Router as RouterType, type Request } from 'express';
+import rateLimit from 'express-rate-limit';
 import { asyncHandler } from '../middleware/error.js';
 import { validateBody, loginSchema, setupSchema, changePasswordSchema } from '../middleware/validation.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -12,6 +13,34 @@ import { isSetupComplete } from '../services/settingsService.js';
 import { VERSION } from '../config/constants.js';
 
 const router: RouterType = Router();
+
+/**
+ * Throttle credential endpoints to slow online brute-force attacks.
+ * Keys on client IP (set TRUST_PROXY when behind a reverse proxy).
+ */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many attempts, please try again later' },
+});
+
+/**
+ * Regenerate the session ID before establishing an authenticated session.
+ * Prevents session fixation: a pre-login (possibly attacker-planted) session ID
+ * cannot survive into the authenticated session.
+ */
+async function establishSession(req: Request, username: string): Promise<void> {
+  await new Promise<void>((resolve, reject) =>
+    req.session.regenerate((err) => (err ? reject(err) : resolve()))
+  );
+  req.session.authenticated = true;
+  req.session.username = username;
+  await new Promise<void>((resolve, reject) =>
+    req.session.save((err) => (err ? reject(err) : resolve()))
+  );
+}
 
 /**
  * GET /api/auth/status
@@ -38,6 +67,7 @@ router.get(
  */
 router.post(
   '/setup',
+  authLimiter,
   validateBody(setupSchema),
   asyncHandler(async (req, res) => {
     const setupComplete = await isSetupComplete();
@@ -52,8 +82,7 @@ router.post(
     await setupCredentials(username, password);
 
     // Auto-login after setup
-    req.session.authenticated = true;
-    req.session.username = username;
+    await establishSession(req, username);
 
     sendSuccess(res, { username }, 'Setup complete');
   })
@@ -65,6 +94,7 @@ router.post(
  */
 router.post(
   '/login',
+  authLimiter,
   validateBody(loginSchema),
   asyncHandler(async (req, res) => {
     const setupComplete = await isSetupComplete();
@@ -82,8 +112,7 @@ router.post(
       return;
     }
 
-    req.session.authenticated = true;
-    req.session.username = username;
+    await establishSession(req, username);
 
     sendSuccess(res, { username }, 'Login successful');
   })
@@ -112,6 +141,7 @@ router.post('/logout', (req, res) => {
  */
 router.post(
   '/change-password',
+  authLimiter,
   requireAuth,
   validateBody(changePasswordSchema),
   asyncHandler(async (req, res) => {

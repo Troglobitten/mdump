@@ -8,13 +8,14 @@ import { resolve, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
 import {
-  SESSION_SECRET,
   SESSION_MAX_AGE,
   SESSIONS_DIR,
   CONFIG_DIR,
   IS_PRODUCTION,
   HTTPS_ENABLED,
+  TRUST_PROXY,
 } from './config/constants.js';
+import { resolveSessionSecret } from './config/secret.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { checkSetup } from './middleware/auth.js';
 
@@ -28,12 +29,19 @@ import settingsRoutes from './routes/settings.js';
 // Create Express app
 const app: Express = express();
 
-// Ensure required directories exist
+// Ensure required directories exist (0700 — these hold the secret, sessions,
+// and the password hash).
 if (!existsSync(CONFIG_DIR)) {
-  mkdirSync(CONFIG_DIR, { recursive: true });
+  mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
 }
 if (!existsSync(SESSIONS_DIR)) {
-  mkdirSync(SESSIONS_DIR, { recursive: true });
+  mkdirSync(SESSIONS_DIR, { recursive: true, mode: 0o700 });
+}
+
+// When running behind a reverse proxy that terminates TLS, trust the first
+// proxy hop so secure-cookie and client-IP (rate-limit) logic work correctly.
+if (TRUST_PROXY) {
+  app.set('trust proxy', 1);
 }
 
 // Session store
@@ -46,7 +54,7 @@ app.use(
       ? {
           directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", 'data:', 'blob:'],
             connectSrc: ["'self'", 'ws:', 'wss:'],
@@ -74,7 +82,7 @@ app.use(
       ttl: SESSION_MAX_AGE / 1000,
       retries: 0,
     }),
-    secret: SESSION_SECRET,
+    secret: resolveSessionSecret(),
     resave: false,
     saveUninitialized: false,
     cookie: {

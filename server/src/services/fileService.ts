@@ -1,8 +1,9 @@
-import { readFile, writeFile, unlink, rename, stat, readdir, mkdir, copyFile } from 'fs/promises';
+import { readFile, unlink, rename, stat, readdir, mkdir, copyFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import type { FileNode, FileContent } from '@mdump/shared';
 import { NOTES_DIR } from '../config/constants.js';
+import { atomicWrite } from '../utils/atomicWrite.js';
 import {
   sandboxPath,
   getRelativePath,
@@ -122,7 +123,7 @@ export async function createFile(
     await mkdir(parentDir, { recursive: true });
   }
 
-  await writeFile(fullPath, content, 'utf-8');
+  await atomicWrite(fullPath, content);
   const stats = await stat(fullPath);
 
   return {
@@ -146,7 +147,7 @@ export async function updateFile(relativePath: string, content: string): Promise
     throw new Error('Not a markdown file');
   }
 
-  await writeFile(fullPath, content, 'utf-8');
+  await atomicWrite(fullPath, content);
   const stats = await stat(fullPath);
 
   return {

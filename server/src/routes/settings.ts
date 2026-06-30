@@ -1,7 +1,7 @@
 import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/error.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validateBody, preferencesSchema } from '../middleware/validation.js';
+import { validateBody, preferencesSchema, tabsSchema } from '../middleware/validation.js';
 import { sendSuccess } from '../utils/response.js';
 import {
   getPreferences,
@@ -64,13 +64,11 @@ router.get(
  */
 router.put(
   '/tabs',
+  validateBody(tabsSchema),
   asyncHandler(async (req, res) => {
     const { openTabs, activeTabPath } = req.body;
 
-    await updateSettings({
-      openTabs: openTabs || [],
-      activeTabPath: activeTabPath || null,
-    });
+    await updateSettings({ openTabs, activeTabPath });
 
     sendSuccess(res, null, 'Tabs saved');
   })

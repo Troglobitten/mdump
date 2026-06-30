@@ -101,6 +101,19 @@ export const moveSchema = z.object({
   destination: z.string(),
 });
 
+export const tabsSchema = z.object({
+  openTabs: z
+    .array(
+      z.object({
+        path: z.string(),
+        name: z.string(),
+        isDirty: z.boolean().optional(),
+      })
+    )
+    .default([]),
+  activeTabPath: z.string().nullable().default(null),
+});
+
 export const searchQuerySchema = z.object({
   q: z.string().min(1, 'Search query is required'),
   scope: z.string().optional(),

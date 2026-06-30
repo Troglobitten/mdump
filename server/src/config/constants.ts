@@ -30,12 +30,20 @@ export const SEARCH_INDEX_FILE = resolve(DATA_DIR, '.search-index.json');
 
 // Server
 export const PORT = parseInt(process.env.PORT || '8080', 10);
-export const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production';
+// Note: the session secret is resolved at startup via config/secret.ts
+// (env var → persisted file → generated). It is intentionally not a constant
+// here so we never fall back to a publicly-known default value.
 
 // TLS
 export const TLS_CERT = process.env.TLS_CERT || '';
 export const TLS_KEY = process.env.TLS_KEY || '';
 export const HTTPS_ENABLED = !!(TLS_CERT && TLS_KEY);
+
+// Reverse proxy: set TRUST_PROXY=1/true when running behind a proxy that
+// terminates TLS, so secure cookies and client-IP-based rate limiting work.
+export const TRUST_PROXY = ['1', 'true', 'yes'].includes(
+  (process.env.TRUST_PROXY || '').toLowerCase()
+);
 
 // Auth
 export const BCRYPT_ROUNDS = 10;
@@ -50,29 +58,10 @@ export const MARKDOWN_EXTENSION = '.md';
 
 // Upload
 export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
-export const ALLOWED_UPLOAD_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'application/pdf',
-  'text/plain',
-  'text/csv',
-  'text/markdown',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/zip',
-  'application/x-tar',
-  'application/gzip',
-  'application/json',
-  'application/xml',
-  'application/octet-stream',
-];
+// Any file type may be uploaded, but only these image types are ever served
+// inline. Everything else (notably SVG and HTML, which can carry script) is
+// served as a download with a neutral content type to prevent stored XSS.
+export const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // Image processing
 export const MAX_IMAGE_DIMENSION = 2560;

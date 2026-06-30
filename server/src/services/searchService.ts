@@ -1,7 +1,8 @@
-import { readFile, writeFile, readdir } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, basename, extname } from 'path';
 import MiniSearch from 'minisearch';
+import { atomicWrite } from '../utils/atomicWrite.js';
 import type { SearchResult, SearchMatch } from '@mdump/shared';
 import {
   SEARCH_INDEX_FILE,
@@ -60,7 +61,7 @@ export async function buildIndex(): Promise<void> {
       indexedPaths = new Set(paths);
       console.log(`Loaded search index with ${indexedPaths.size} documents`);
       return;
-    } catch (error) {
+    } catch {
       console.warn('Failed to load cached search index, rebuilding...');
     }
   }
@@ -174,7 +175,7 @@ export async function saveIndex(): Promise<void> {
       data,
       paths: Array.from(indexedPaths),
     });
-    await writeFile(SEARCH_INDEX_FILE, cached, 'utf-8');
+    await atomicWrite(SEARCH_INDEX_FILE, cached);
   } catch (error) {
     console.error('Failed to save search index:', error);
   }

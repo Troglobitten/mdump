@@ -20,7 +20,9 @@ services:
       - DATA_DIR=/data
       - NOTES_DIR=/data/notes
       - PORT=8080
-      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
+      # Leave unset to auto-generate and persist a random secret on first run,
+      # or provide your own (e.g. `openssl rand -base64 32`).
+      - SESSION_SECRET=${SESSION_SECRET:-}
       # Optional: Enable HTTPS by providing paths to TLS cert and key inside the container
       # - TLS_CERT=/data/certs/cert.pem
       # - TLS_KEY=/data/certs/key.pem

@@ -16,9 +16,10 @@ import {
 } from '../services/fileService.js';
 import { getResizedImage } from '../services/imageService.js';
 import { sandboxPath, isMarkdownFile } from '../utils/paths.js';
-import { RESIZABLE_TYPES } from '../config/constants.js';
+import { RESIZABLE_TYPES, INLINE_IMAGE_TYPES } from '../config/constants.js';
 import { existsSync } from 'fs';
 import { readFile, stat } from 'fs/promises';
+import { basename } from 'path';
 import { lookup } from 'mime-types';
 
 const router: RouterType = Router();
@@ -88,7 +89,19 @@ router.get(
       }
 
       const stats = await stat(fullPath);
-      res.setHeader('Content-Type', mimeType);
+
+      // Only known-safe image types are served inline. Everything else (e.g.
+      // SVG, HTML, scripts) is served as a neutral download so it cannot
+      // execute script in the app's origin (stored-XSS prevention).
+      const inlineSafe = INLINE_IMAGE_TYPES.includes(mimeType);
+      res.setHeader('Content-Type', inlineSafe ? mimeType : 'application/octet-stream');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (!inlineSafe) {
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${encodeURIComponent(basename(fullPath))}"`
+        );
+      }
       res.setHeader('Content-Length', stats.size);
       res.setHeader('Cache-Control', 'private, max-age=31536000');
 
@@ -121,18 +134,14 @@ router.post(
 
     const { content = '' } = req.body;
 
-    try {
-      const exists = await fileExists(filePath);
-      if (exists) {
-        sendError(res, 'File already exists', 409);
-        return;
-      }
-
-      const fileContent = await createFile(filePath, content);
-      sendSuccess(res, fileContent, 'File created', 201);
-    } catch (error) {
-      throw error;
+    const exists = await fileExists(filePath);
+    if (exists) {
+      sendError(res, 'File already exists', 409);
+      return;
     }
+
+    const fileContent = await createFile(filePath, content);
+    sendSuccess(res, fileContent, 'File created', 201);
   })
 );
 
