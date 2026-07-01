@@ -13,6 +13,7 @@ import {
   moveFile,
   duplicateFile,
   fileExists,
+  ConflictError,
 } from '../services/fileService.js';
 import { getResizedImage } from '../services/imageService.js';
 import { sandboxPath, isMarkdownFile } from '../utils/paths.js';
@@ -160,7 +161,7 @@ router.put(
       return;
     }
 
-    const { content } = req.body;
+    const { content, expectedModifiedAt } = req.body;
 
     const exists = await fileExists(filePath);
     if (!exists) {
@@ -168,8 +169,16 @@ router.put(
       return;
     }
 
-    const fileContent = await updateFile(filePath, content);
-    sendSuccess(res, fileContent, 'File updated');
+    try {
+      const fileContent = await updateFile(filePath, content, expectedModifiedAt);
+      sendSuccess(res, fileContent, 'File updated');
+    } catch (err) {
+      if (err instanceof ConflictError) {
+        sendError(res, err.message, 409);
+        return;
+      }
+      throw err;
+    }
   })
 );
 

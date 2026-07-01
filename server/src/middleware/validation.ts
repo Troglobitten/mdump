@@ -70,6 +70,9 @@ export const changePasswordSchema = z.object({
 
 export const fileContentSchema = z.object({
   content: z.string(),
+  // Optimistic-concurrency token: the modifiedAt the client last saw. When
+  // present on update, the server rejects the write if the file changed since.
+  expectedModifiedAt: z.string().optional(),
 });
 
 export const renameSchema = z.object({

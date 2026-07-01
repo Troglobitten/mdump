@@ -14,6 +14,17 @@ import {
 import { validateFilename, generateUniqueFilename } from '../utils/filename.js';
 
 /**
+ * Thrown when an update is rejected because the file changed on disk since the
+ * client last read it (optimistic-concurrency conflict).
+ */
+export class ConflictError extends Error {
+  constructor(public currentModifiedAt: string) {
+    super('File was modified outside this editor');
+    this.name = 'ConflictError';
+  }
+}
+
+/**
  * Ensure the notes directory exists
  */
 export async function ensureNotesDir(): Promise<void> {
@@ -136,7 +147,11 @@ export async function createFile(
 /**
  * Update a file's content
  */
-export async function updateFile(relativePath: string, content: string): Promise<FileContent> {
+export async function updateFile(
+  relativePath: string,
+  content: string,
+  expectedModifiedAt?: string
+): Promise<FileContent> {
   const fullPath = sandboxPath(relativePath);
 
   if (!existsSync(fullPath)) {
@@ -145,6 +160,17 @@ export async function updateFile(relativePath: string, content: string): Promise
 
   if (!isMarkdownFile(fullPath)) {
     throw new Error('Not a markdown file');
+  }
+
+  // Optimistic concurrency: if the caller told us which version it edited,
+  // refuse the write when the on-disk file has since changed (external edit,
+  // another tab/device). Compares the exact ISO serialization we hand out.
+  if (expectedModifiedAt) {
+    const current = await stat(fullPath);
+    const currentModifiedAt = current.mtime.toISOString();
+    if (currentModifiedAt !== expectedModifiedAt) {
+      throw new ConflictError(currentModifiedAt);
+    }
   }
 
   await atomicWrite(fullPath, content);

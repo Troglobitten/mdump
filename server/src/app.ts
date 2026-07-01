@@ -1,9 +1,9 @@
 import express, { type Express } from 'express';
 import session from 'express-session';
 import FileStore from 'session-file-store';
-import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import compression from 'compression';
+import sharp from 'sharp';
 import { resolve, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
@@ -25,6 +25,11 @@ import folderRoutes from './routes/folders.js';
 import uploadRoutes from './routes/upload.js';
 import searchRoutes from './routes/search.js';
 import settingsRoutes from './routes/settings.js';
+
+// Limit sharp to a single worker thread. Attacker-controlled images are
+// decoded here; capping concurrency (alongside limitInputPixels) bounds the
+// memory/CPU an image can consume and blocks decompression-bomb DoS.
+sharp.concurrency(1);
 
 // Create Express app
 const app: Express = express();
@@ -72,7 +77,6 @@ app.use(compression());
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
 
 // Session middleware
 app.use(
