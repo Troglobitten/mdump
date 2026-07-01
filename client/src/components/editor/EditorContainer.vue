@@ -282,6 +282,14 @@ const { updateHeadings, clearHeadings } = useOutline();
 const { registerShortcut } = useKeyboard();
 const debug = useDebug('EditorContainer');
 const toast = inject<ReturnType<typeof useToast>>('toast')!;
+const confirm = inject<
+  (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    options?: { confirmLabel?: string; cancelLabel?: string }
+  ) => void
+>('confirm')!;
 const externalReloadPath = inject<Ref<string | null>>('externalReloadPath')!;
 
 const loading = ref(true);
@@ -1025,32 +1033,19 @@ function setBlockType(type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6
   blockStyleDropdownOpen.value = false;
 }
 
-// Cache DOM references to avoid repeated queries
-let cachedSplitWrapper: HTMLElement | null = null;
-let cachedWysiwygPane: HTMLElement | null = null;
-let cachedSourcePane: HTMLElement | null = null;
-
 function setViewMode(mode: 'wysiwyg' | 'source') {
   viewMode.value = mode;
   viewModeDropdownOpen.value = false;
 
-  if (!crepe?.editor) return;
+  if (!crepe?.editor || !editorEl.value) return;
 
-  // Get or cache DOM references
-  if (!cachedSplitWrapper) {
-    cachedSplitWrapper = document.querySelector('.split-editor') as HTMLElement;
-    if (!cachedSplitWrapper) return;
-
-    cachedWysiwygPane = cachedSplitWrapper.children[0] as HTMLElement;
-    cachedSourcePane = cachedSplitWrapper.querySelector('.milkdown-split-editor') as HTMLElement;
-
-    if (!cachedWysiwygPane || !cachedSourcePane) return;
-  }
-
-  const wrapper = cachedSplitWrapper;
-  const wysiwyg = cachedWysiwygPane;
-  const source = cachedSourcePane;
-
+  // Query the panes fresh every time. The editor DOM is destroyed and rebuilt
+  // on every load/external-reload, so caching these refs across recreations
+  // leaves us toggling a detached node while the live editor shows both panes.
+  const wrapper = editorEl.value.querySelector('.split-editor') as HTMLElement | null;
+  if (!wrapper) return;
+  const wysiwyg = wrapper.children[0] as HTMLElement | null;
+  const source = wrapper.querySelector('.milkdown-split-editor') as HTMLElement | null;
   if (!wysiwyg || !source) return;
 
   // Reset display for both panes
@@ -1205,17 +1200,18 @@ async function save({ silent = false, force = false } = {}) {
         // document dirty and let the user resolve it with a manual save.
         toast.error('Note changed on disk — press save to review');
       } else {
-        const overwrite = window.confirm(
-          'This note was changed outside the editor since you opened it.\n\n' +
-            'OK = overwrite the on-disk version with your changes.\n' +
-            'Cancel = keep editing (reload the note to get the newer version).'
+        // Themed prompt; overwriting is destructive so it lives behind an
+        // explicit confirm. Cancel is a no-op that leaves the note dirty.
+        confirm(
+          'Note changed on disk',
+          'This note was changed outside the editor since you opened it. ' +
+            'Overwrite the on-disk version with your changes, or keep editing ' +
+            'and reload to get the newer version?',
+          () => {
+            void save({ silent: false, force: true });
+          },
+          { confirmLabel: 'Overwrite', cancelLabel: 'Keep editing' }
         );
-        if (overwrite) {
-          saving.value = false;
-          await save({ silent, force: true });
-          return;
-        }
-        toast.error('Save cancelled — note left unsaved');
       }
     } else {
       debug.error('Save failed:', error);
@@ -1309,11 +1305,6 @@ onUnmounted(() => {
   toolbarScrollContainer.value?.removeEventListener('scroll', checkToolbarOverflow);
   toolbarResizeObserver?.disconnect();
 
-  // Clear DOM cache for next component instance
-  cachedSplitWrapper = null;
-  cachedWysiwygPane = null;
-  cachedSourcePane = null;
-
   if (unsubscribeShortcut) {
     unsubscribeShortcut();
     debug.log('Keyboard shortcuts unregistered');
@@ -1341,9 +1332,25 @@ onUnmounted(() => {
 // Watch for external file changes
 watch(externalReloadPath, (path) => {
   if (path === props.filePath) {
-    debug.log('External file change detected, reloading');
-    loadFile();
     externalReloadPath.value = null;
+    if (isDirty.value) {
+      // Don't clobber unsaved edits. Let the user choose to discard-and-reload
+      // or keep editing (and resolve the conflict on their next save).
+      debug.log('External change while dirty — prompting');
+      confirm(
+        'Note changed on disk',
+        'This note was changed outside the editor and you have unsaved changes. ' +
+          'Reload and discard your changes, or keep editing?',
+        () => {
+          void loadFile();
+        },
+        { confirmLabel: 'Reload', cancelLabel: 'Keep editing' }
+      );
+    } else {
+      // Clean editor: safe to silently show the latest version.
+      debug.log('External file change detected, reloading');
+      loadFile();
+    }
   }
 });
 </script>

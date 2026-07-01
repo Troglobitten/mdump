@@ -3,10 +3,18 @@ import { AlertTriangle, X } from 'lucide-vue-next';
 
 const open = defineModel<boolean>('open', { default: false });
 
-defineProps<{
-  title: string;
-  message: string;
-}>();
+withDefaults(
+  defineProps<{
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+  }>(),
+  {
+    confirmLabel: 'Confirm',
+    cancelLabel: 'Cancel',
+  }
+);
 
 const emit = defineEmits<{
   confirm: [];
@@ -46,8 +54,8 @@ function handleCancel() {
 
         <!-- Footer -->
         <div class="flex justify-end gap-2 p-4 border-t border-base-300">
-          <button class="btn btn-ghost" @click="handleCancel">Cancel</button>
-          <button class="btn btn-error" @click="handleConfirm">Confirm</button>
+          <button class="btn btn-ghost" @click="handleCancel">{{ cancelLabel }}</button>
+          <button class="btn btn-error" @click="handleConfirm">{{ confirmLabel }}</button>
         </div>
       </div>
     </div>

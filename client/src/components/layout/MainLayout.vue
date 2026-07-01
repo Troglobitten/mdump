@@ -30,6 +30,8 @@ const confirmModal = ref<{
   title: string;
   message: string;
   onConfirm: () => void;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }>({
   show: false,
   title: '',
@@ -51,9 +53,24 @@ provide('openNewFolder', (folderPath?: string) => {
   newFolderParentPath.value = folderPath || '';
   showNewFolder.value = true;
 });
-provide('confirm', (title: string, message: string, onConfirm: () => void) => {
-  confirmModal.value = { show: true, title, message, onConfirm };
-});
+provide(
+  'confirm',
+  (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    options?: { confirmLabel?: string; cancelLabel?: string }
+  ) => {
+    confirmModal.value = {
+      show: true,
+      title,
+      message,
+      onConfirm,
+      confirmLabel: options?.confirmLabel,
+      cancelLabel: options?.cancelLabel,
+    };
+  }
+);
 
 const newNoteFolderPath = ref('');
 const newFolderParentPath = ref('');
@@ -156,6 +173,8 @@ function handleConfirm() {
       v-model:open="confirmModal.show"
       :title="confirmModal.title"
       :message="confirmModal.message"
+      :confirm-label="confirmModal.confirmLabel"
+      :cancel-label="confirmModal.cancelLabel"
       @confirm="handleConfirm"
     />
   </div>
