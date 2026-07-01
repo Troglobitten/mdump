@@ -44,6 +44,14 @@ When adding editor functionality, use Milkdown's plugin system (commands,
 plugins, context) rather than DOM manipulation or synthetic events. See
 `CLAUDE.md` for details.
 
+**Upgrading Milkdown:** the root `package.json` pins `@milkdown/ctx` via a
+`pnpm.overrides` entry. `@milkdown-lab/plugin-split-editing` (which powers the
+Source view) declares a loose `@milkdown/ctx ^7.4.0`, and without the override
+pnpm keeps an older `ctx` for the plugin while Crepe uses the newer one — two
+copies of a class with `#private` fields, which fails type-checking. Bump the
+override's version in lockstep with any `@milkdown/*` upgrade so a single `ctx`
+resolves for everything.
+
 ## Reporting bugs / requesting features
 
 Use the issue templates. For security issues, follow `SECURITY.md` instead of

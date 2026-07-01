@@ -363,13 +363,12 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
 }
 
 /* ========================================
-   Split Editing Plugin Styles
+   WYSIWYG / Source view styles
    ======================================== */
 
-/* Split editor wrapper - grid layout (columns set dynamically by JS).
-   In non-split modes, height is auto so content flows naturally and the
-   parent .milkdown scrolls. In split mode, height: 100% constrains both
-   panes so each scrolls independently. */
+/* Editor wrapper (from the underlying editing plugin). Only one pane is shown
+   at a time — WYSIWYG (.ProseMirror) or Source (.milkdown-split-editor) — with
+   the hidden pane toggled off in JS. Single-column grid. */
 .split-editor {
   display: grid;
   grid-template-rows: 1fr;
@@ -377,29 +376,19 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   width: 100%;
 }
 
-.split-editor[data-view-mode="split"] {
-  height: 100%;
-}
-
-/* Individual editor panes.
-   In split mode, both need overflow:auto + min-width/height:0 so CSS grid
-   can constrain them to their 1fr allocation. */
+/* The source pane needs its own scroll container. */
 .milkdown-split-editor {
   overflow: auto;
   min-height: 0;
   min-width: 0;
 }
 
-/* The WYSIWYG pane (.ProseMirror) must NOT be a scroll container in
-   non-split modes — prosemirror-virtual-cursor uses position:absolute
-   with viewport-relative coords, which breaks when .ProseMirror scrolls. */
+/* The WYSIWYG pane (.ProseMirror) must NOT be a scroll container —
+   prosemirror-virtual-cursor uses position:absolute with viewport-relative
+   coords, which breaks when .ProseMirror scrolls. */
 .split-editor > .ProseMirror {
   min-height: 0;
   min-width: 0;
-}
-
-.split-editor[data-view-mode="split"] > .ProseMirror {
-  overflow: auto;
 }
 
 /* User preferences - dynamic values via CSS variables */
@@ -413,13 +402,12 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   font-size: calc(var(--editor-font-scale, 1) * 1em);
 }
 
-/* Apply padding only when NOT in split view */
-.editor-wrap:not(:has(.split-editor[data-view-mode="split"])) .ProseMirror {
+.editor-wrap .ProseMirror {
   padding-left: var(--editor-padding-left, 0);
   padding-right: var(--editor-padding-right, 0);
 }
 
-/* Style the source code editor (CodeMirror) in split view.
+/* Style the source-view code editor (CodeMirror).
    Scoped to .milkdown-split-editor so it doesn't affect CodeMirror
    instances embedded inside code blocks in the WYSIWYG pane. */
 .milkdown-split-editor .cm-editor {
@@ -428,14 +416,7 @@ html[data-mdump-themed-editor="true"][data-theme-mode="focus"] .milkdown {
   height: 100%;
 }
 
-/* Disable line wrapping on the WYSIWYG pane in split mode.
-   The WYSIWYG pane is .ProseMirror, a direct child of .split-editor. */
-.split-editor[data-view-mode="split"] > .ProseMirror {
-  white-space: pre;
-  overflow-x: auto;
-}
-
-/* Ensure proper scrolling */
+/* Ensure proper scrolling in the source pane */
 .split-editor .cm-scroller {
   overflow: auto;
 }

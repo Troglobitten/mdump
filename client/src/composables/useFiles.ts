@@ -50,10 +50,14 @@ export function useFiles() {
     }
   }
 
-  async function saveFile(path: string, content: string): Promise<FileContent> {
+  async function saveFile(
+    path: string,
+    content: string,
+    expectedModifiedAt?: string
+  ): Promise<FileContent> {
     try {
       recentlySaved.set(path, Date.now());
-      return await filesApi.updateFile(path, content);
+      return await filesApi.updateFile(path, content, expectedModifiedAt);
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to save file';
       throw err;

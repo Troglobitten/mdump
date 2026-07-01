@@ -16,6 +16,20 @@ import type {
 const BASE_URL = '/api';
 
 /**
+ * Error thrown for non-2xx API responses. Carries the HTTP status so callers
+ * can branch on it (e.g. 409 = save conflict).
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+/**
  * Encode a file path for URL, preserving slashes
  */
 function encodePath(path: string): string {
@@ -43,7 +57,7 @@ async function fetchApi<T>(
   const data: ApiResponse<T> = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || `HTTP error ${response.status}`);
+    throw new ApiError(data.error || `HTTP error ${response.status}`, response.status);
   }
 
   return data;
@@ -106,10 +120,14 @@ export const filesApi = {
     return response.data!;
   },
 
-  async updateFile(path: string, content: string): Promise<FileContent> {
+  async updateFile(
+    path: string,
+    content: string,
+    expectedModifiedAt?: string
+  ): Promise<FileContent> {
     const response = await fetchApi<FileContent>(`/files/${encodePath(path)}`, {
       method: 'PUT',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, expectedModifiedAt }),
     });
     return response.data!;
   },

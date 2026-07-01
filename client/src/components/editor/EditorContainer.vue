@@ -19,7 +19,7 @@ import type { OutlineItem } from '@/composables/useOutline';
 import { useKeyboard } from '@/composables/useKeyboard';
 import { useDebug } from '@/composables/useDebug';
 import type { useToast } from '@/composables/useToast';
-import { uploadApi } from '@/api/client';
+import { uploadApi, ApiError } from '@/api/client';
 import Breadcrumb from './Breadcrumb.vue';
 import AttachmentBar from './AttachmentBar.vue';
 
@@ -288,6 +288,9 @@ const loading = ref(true);
 const saving = ref(false);
 const content = ref('');
 const lastSavedContent = ref('');
+// modifiedAt the server reported when we last loaded/saved this file. Sent back
+// on save so the server can reject writes if the file changed underneath us.
+const lastModifiedAt = ref<string | null>(null);
 const editorEl = ref<HTMLDivElement | null>(null);
 const fileUploadInput = ref<HTMLInputElement | null>(null);
 const attachmentBarRef = ref<InstanceType<typeof AttachmentBar> | null>(null);
@@ -371,10 +374,10 @@ function toggleListDropdown() {
   blockStyleDropdownOpen.value = false;
 }
 
-// Split editing view mode: 'wysiwyg' (default), 'split', or 'source'
-// Load from localStorage or default to 'wysiwyg'
-const savedViewMode = localStorage.getItem('editor-view-mode') as 'wysiwyg' | 'split' | 'source' | null;
-const viewMode = ref<'wysiwyg' | 'split' | 'source'>(savedViewMode || 'wysiwyg');
+// Editor view mode: 'wysiwyg' (default) or 'source'.
+// Load from localStorage; any legacy 'split' value falls back to 'wysiwyg'.
+const savedViewMode = localStorage.getItem('editor-view-mode');
+const viewMode = ref<'wysiwyg' | 'source'>(savedViewMode === 'source' ? 'source' : 'wysiwyg');
 const viewModeDropdownOpen = ref(false);
 
 // Save view mode to localStorage whenever it changes
@@ -522,6 +525,7 @@ async function loadFile() {
     const fileContent = await getFile(props.filePath);
     content.value = fileContent.content;
     lastSavedContent.value = fileContent.content;
+    lastModifiedAt.value = fileContent.modifiedAt;
     debug.log('File loaded, content length:', content.value.length);
 
     // Destroy and recreate editor with new content
@@ -1026,7 +1030,7 @@ let cachedSplitWrapper: HTMLElement | null = null;
 let cachedWysiwygPane: HTMLElement | null = null;
 let cachedSourcePane: HTMLElement | null = null;
 
-function setViewMode(mode: 'wysiwyg' | 'split' | 'source') {
+function setViewMode(mode: 'wysiwyg' | 'source') {
   viewMode.value = mode;
   viewModeDropdownOpen.value = false;
 
@@ -1053,18 +1057,14 @@ function setViewMode(mode: 'wysiwyg' | 'split' | 'source') {
   wysiwyg.style.display = '';
   source.style.display = '';
 
-  // Apply view mode
-  if (mode === 'wysiwyg') {
-    source.style.display = 'none';
-    wrapper.style.gridTemplateColumns = '1fr';
-    wrapper.setAttribute('data-view-mode', 'wysiwyg');
-  } else if (mode === 'source') {
+  // Apply view mode: show exactly one pane (single-column layout).
+  wrapper.style.gridTemplateColumns = '1fr';
+  if (mode === 'source') {
     wysiwyg.style.display = 'none';
-    wrapper.style.gridTemplateColumns = '1fr';
     wrapper.setAttribute('data-view-mode', 'source');
   } else {
-    wrapper.style.gridTemplateColumns = '1fr 1fr';
-    wrapper.setAttribute('data-view-mode', 'split');
+    source.style.display = 'none';
+    wrapper.setAttribute('data-view-mode', 'wysiwyg');
   }
 }
 
@@ -1165,7 +1165,7 @@ const listTypeLabels = {
 };
 
 // Save file content
-async function save({ silent = false } = {}) {
+async function save({ silent = false, force = false } = {}) {
   if (saving.value) {
     debug.warn('Save already in progress, skipping');
     return;
@@ -1183,16 +1183,44 @@ async function save({ silent = false } = {}) {
 
   try {
     debug.time('File save');
-    await saveFile(props.filePath, toSave);
+    // Send the version we last saw so the server can detect a conflicting
+    // external edit. `force` (from an overwrite confirmation) skips the check.
+    const result = await saveFile(
+      props.filePath,
+      toSave,
+      force ? undefined : lastModifiedAt.value ?? undefined
+    );
     debug.timeEnd('File save');
 
     lastSavedContent.value = toSave;
+    lastModifiedAt.value = result.modifiedAt;
     markDirty(props.filePath, false);
     debug.log('Save successful');
     if (!silent) toast.success('Saved');
   } catch (error) {
-    debug.error('Save failed:', error);
-    toast.error('Failed to save');
+    if (error instanceof ApiError && error.status === 409) {
+      debug.warn('Save conflict: file changed on disk');
+      if (silent) {
+        // Never silently clobber an external edit during autosave. Leave the
+        // document dirty and let the user resolve it with a manual save.
+        toast.error('Note changed on disk — press save to review');
+      } else {
+        const overwrite = window.confirm(
+          'This note was changed outside the editor since you opened it.\n\n' +
+            'OK = overwrite the on-disk version with your changes.\n' +
+            'Cancel = keep editing (reload the note to get the newer version).'
+        );
+        if (overwrite) {
+          saving.value = false;
+          await save({ silent, force: true });
+          return;
+        }
+        toast.error('Save cancelled — note left unsaved');
+      }
+    } else {
+      debug.error('Save failed:', error);
+      toast.error('Failed to save');
+    }
   } finally {
     saving.value = false;
   }
@@ -1426,7 +1454,7 @@ watch(externalReloadPath, (path) => {
           @mousedown.prevent
         >
           <button
-            v-for="mode in [{ value: 'wysiwyg', label: 'WYSIWYG' }, { value: 'split', label: 'Split' }, { value: 'source', label: 'Source' }]"
+            v-for="mode in [{ value: 'wysiwyg', label: 'WYSIWYG' }, { value: 'source', label: 'Source' }]"
             :key="mode.value"
             type="button"
             class="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-base-content hover:bg-base-200 cursor-pointer"
