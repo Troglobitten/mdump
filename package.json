@@ -32,7 +32,11 @@
   "packageManager": "pnpm@8.15.4",
   "pnpm": {
     "overrides": {
-      "@milkdown/ctx": "^7.21.2"
+      "@milkdown/ctx": "^7.21.2",
+      "prosemirror-model": "^1.25.9",
+      "prosemirror-state": "^1.4.4",
+      "prosemirror-transform": "^1.12.0",
+      "prosemirror-view": "^1.41.9"
     }
   }
 }
