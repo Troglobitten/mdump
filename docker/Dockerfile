@@ -3,8 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm (pinned to the root package.json "packageManager" version; newer
+# majors try to switch to it and fail on Alpine/musl)
+RUN npm install -g pnpm@8.15.4
 
 # Copy package files
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
@@ -35,7 +36,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Install pnpm, su-exec (privilege drop) and wget (healthcheck); create app user
-RUN npm install -g pnpm \
+RUN npm install -g pnpm@8.15.4 \
   && apk add --no-cache su-exec wget \
   && addgroup -S app && adduser -S app -G app
 
