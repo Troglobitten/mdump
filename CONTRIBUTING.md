@@ -52,6 +52,14 @@ copies of a class with `#private` fields, which fails type-checking. Bump the
 override's version in lockstep with any `@milkdown/*` upgrade so a single `ctx`
 resolves for everything.
 
+The same applies to the `prosemirror-model`, `prosemirror-state`,
+`prosemirror-transform`, and `prosemirror-view` overrides: set them to the
+versions `@milkdown/prose` depends on. If two copies of `prosemirror-model` get
+bundled, the editor throws "Can not convert <> to a Fragment (looks like
+multiple versions of prosemirror-model were loaded)" at runtime. After
+`pnpm install`, `grep '^  /prosemirror-model@' pnpm-lock.yaml` should list a
+single version.
+
 ## Reporting bugs / requesting features
 
 Use the issue templates. For security issues, follow `SECURITY.md` instead of
